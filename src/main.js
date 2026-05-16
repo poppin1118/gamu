@@ -5,6 +5,7 @@ import { drawText } from './engine/PixelFont.js';
 import { registerGame, getGame } from './menu/GameRegistry.js';
 import { MainMenu } from './menu/MainMenu.js';
 import DummyGame from './games/dummy/index.js';
+import IceClimberGame from './games/iceclimber/index.js';
 
 const canvasEl = document.getElementById('game');
 const canvas = new Canvas(canvasEl, { logicalW: 256, logicalH: 240 });
@@ -12,6 +13,7 @@ const inputMgr = new InputManager();
 inputMgr.attach(window);
 
 registerGame(DummyGame);
+registerGame(IceClimberGame);
 
 const sceneCtx = {
   canvas,
