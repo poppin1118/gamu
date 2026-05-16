@@ -1,8 +1,8 @@
 import { TYPE, GRID_W } from './IceGrid.js';
 
-export const TOTAL_ROWS = 33;
-export const GOAL_ROW = 32;
-export const FLOOR_ROWS = 4;
+export const TOTAL_ROWS = 17;
+export const GOAL_ROW = 16;
+export const FLOOR_ROWS = 2;
 export const TOTAL_FLOORS = 8;
 
 export function generateLevel(rng) {

@@ -6,7 +6,7 @@ export const PLAYER_W = 12;
 export const PLAYER_H = 14;
 
 export const GRAVITY = 480;
-export const JUMP_VY = -180;
+export const JUMP_VY = -200;
 export const RUN_SPEED = 60;
 export const AIR_SPEED_MUL = 0.7;
 export const MAX_FALL_SPEED = 320;

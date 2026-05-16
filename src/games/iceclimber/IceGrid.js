@@ -1,6 +1,6 @@
 export const GRID_W = 8;
 export const CELL_W = 16;
-export const CELL_H = 8;
+export const CELL_H = 16;
 export const PLAYFIELD_W = GRID_W * CELL_W;
 
 export const TYPE = Object.freeze({

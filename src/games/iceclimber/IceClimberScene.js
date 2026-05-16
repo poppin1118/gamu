@@ -27,18 +27,16 @@ export class IceClimberScene extends Scene {
     rows.forEach((types, r) => this.grid.setRow(r, types));
 
     const spawnCol = Math.floor(GRID_W / 2);
-    for (let r = 1; r <= 2; r++) {
-      for (let c = spawnCol - 1; c <= spawnCol + 1; c++) {
-        const cell = this.grid.cellAt(c, r);
-        if (cell) { cell.type = TYPE.EMPTY; cell.hits = 0; }
-      }
+    for (let c = spawnCol - 1; c <= spawnCol + 1; c++) {
+      const cell = this.grid.cellAt(c, 1);
+      if (cell) { cell.type = TYPE.EMPTY; cell.hits = 0; }
     }
 
     this.player = new Player({
       x: spawnCol * CELL_W + (CELL_W - PLAYER_W) / 2,
       y: -PLAYER_H,
     });
-    this.camera = new Camera({ viewH: VIEW_H, deadzoneTop: 120 });
+    this.camera = new Camera({ viewH: VIEW_H, deadzoneTop: 140 });
     this.camera.setInitial(this.player.y);
 
     this.score = 0;

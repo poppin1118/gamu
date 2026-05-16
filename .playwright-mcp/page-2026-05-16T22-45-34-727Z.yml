@@ -1,0 +1,84 @@
+- generic [active] [ref=e1]:
+  - link "Get Kenney Game Assets All-in-1 to download everything at once, plus free updates!" [ref=e2] [cursor=pointer]:
+    - /url: https://kenney.itch.io/kenney-game-assets
+    - img [ref=e3]
+    - text: Get Kenney Game Assets All-in-1 to download everything at once, plus free updates!
+  - generic [ref=e5]:
+    - link [ref=e7] [cursor=pointer]:
+      - /url: https://kenney.nl
+      - img [ref=e8]
+    - generic:
+      - list:
+        - listitem [ref=e9]:
+          - link [ref=e10] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e12]
+    - generic:
+      - link "×" [ref=e13] [cursor=pointer]:
+        - /url: javascript:void(0)
+      - generic:
+        - link "Games" [ref=e14] [cursor=pointer]:
+          - /url: https://kenney.nl/games
+        - link "Tools" [ref=e15] [cursor=pointer]:
+          - /url: https://kenney.nl/tools
+        - link "Assets" [ref=e16] [cursor=pointer]:
+          - /url: https://kenney.nl/assets
+        - link "Starter Kits" [ref=e17] [cursor=pointer]:
+          - /url: https://kenney.nl/starter-kits
+      - separator [ref=e18]
+      - generic:
+        - link "Support" [ref=e19] [cursor=pointer]:
+          - /url: https://kenney.nl/support
+        - link "Knowledge Base" [ref=e20] [cursor=pointer]:
+          - /url: https://kenney.nl/knowledge-base
+        - link "Donate" [ref=e21] [cursor=pointer]:
+          - /url: https://kenney.nl/donate
+      - separator [ref=e22]
+      - link [ref=e23] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e24]
+  - generic [ref=e27]:
+    - generic [ref=e30]:
+      - img [ref=e31]
+      - searchbox "Search" [ref=e32]
+      - link "×" [ref=e33] [cursor=pointer]:
+        - /url: https://kenney.nl/assets
+    - paragraph [ref=e36]:
+      - link "2D" [ref=e37] [cursor=pointer]:
+        - /url: https://kenney.nl/assets/category:2D
+      - link "3D" [ref=e38] [cursor=pointer]:
+        - /url: https://kenney.nl/assets/category:3D
+      - link "UI" [ref=e39] [cursor=pointer]:
+        - /url: https://kenney.nl/assets/tag:interface
+      - link "Audio" [ref=e40] [cursor=pointer]:
+        - /url: https://kenney.nl/assets/category:Audio
+      - link "Pixel" [ref=e41] [cursor=pointer]:
+        - /url: https://kenney.nl/assets/tag:pixel
+    - generic [ref=e42]:
+      - paragraph [ref=e44]:
+        - link "Upcoming" [ref=e45] [cursor=pointer]:
+          - /url: https://kenney.nl/upcoming
+        - link "Feed" [ref=e46] [cursor=pointer]:
+          - /url: https://kenney.nl/feed
+      - paragraph [ref=e49]:
+        - text: Sort by
+        - combobox [ref=e51]:
+          - option "Release date"
+          - option "Latest update" [selected]
+          - option "Quantity"
+          - option "Name"
+    - paragraph [ref=e53]: Unfortunately, no results were found for your search
+  - contentinfo [ref=e54]:
+    - generic [ref=e55]:
+      - generic [ref=e56]: Copyright © 2010 - 2026 · All rights reserved
+      - generic [ref=e57]:
+        - link "Feed" [ref=e58] [cursor=pointer]:
+          - /url: https://kenney.nl/feed
+        - link "Support" [ref=e59] [cursor=pointer]:
+          - /url: https://kenney.nl/support
+        - link "Knowledge Base" [ref=e60] [cursor=pointer]:
+          - /url: https://kenney.nl/knowledge-base
+        - link "Privacy Policy" [ref=e61] [cursor=pointer]:
+          - /url: https://kenney.nl/privacy-policy
+        - link "Terms of Service" [ref=e62] [cursor=pointer]:
+          - /url: https://kenney.nl/terms-of-service

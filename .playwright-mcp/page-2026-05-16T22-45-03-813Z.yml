@@ -1,0 +1,138 @@
+- generic [ref=e1]:
+  - link [ref=e84] [cursor=pointer]:
+    - /url: https://kenney.itch.io/kenney-game-assets
+    - img [ref=e3]
+    - text: Get Kenney Game Assets All-in-1 to download everything at once, plus free updates!
+  - generic [ref=e5]:
+    - link [ref=e7] [cursor=pointer]:
+      - /url: https://kenney.nl
+      - img [ref=e8]
+    - listitem [ref=e9]:
+      - link [ref=e10] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e12]
+    - link [ref=e85] [cursor=pointer]:
+      - /url: javascript:void(0)
+      - text: ×
+    - link [ref=e86] [cursor=pointer]:
+      - /url: https://kenney.nl/games
+      - text: Games
+    - link [ref=e87] [cursor=pointer]:
+      - /url: https://kenney.nl/tools
+      - text: Tools
+    - link [ref=e88] [cursor=pointer]:
+      - /url: https://kenney.nl/assets
+      - text: Assets
+    - link [ref=e89] [cursor=pointer]:
+      - /url: https://kenney.nl/starter-kits
+      - text: Starter Kits
+    - separator [ref=e18]
+    - link [ref=e90] [cursor=pointer]:
+      - /url: https://kenney.nl/support
+      - text: Support
+    - link [ref=e91] [cursor=pointer]:
+      - /url: https://kenney.nl/knowledge-base
+      - text: Knowledge Base
+    - link [ref=e92] [cursor=pointer]:
+      - /url: https://kenney.nl/donate
+      - text: Donate
+    - separator [ref=e22]
+    - link [ref=e23] [cursor=pointer]:
+      - /url: "#"
+      - img [ref=e24]
+  - generic [ref=e28]:
+    - generic [ref=e29]:
+      - heading [level=1] [ref=e93]: Pixel Platformer
+      - table [ref=e31]:
+        - rowgroup [ref=e32]:
+          - row [ref=e94]:
+            - cell [ref=e95]: Tags
+            - cell [ref=e96]:
+              - link [ref=e97] [cursor=pointer]:
+                - /url: https://kenney.nl/assets/tag:platformer
+                - text: platformer
+              - link [ref=e98] [cursor=pointer]:
+                - /url: https://kenney.nl/assets/tag:pixel
+                - text: pixel
+              - link [ref=e99] [cursor=pointer]:
+                - /url: https://kenney.nl/assets/tag:oopi
+                - text: oopi
+          - row [ref=e100]:
+            - cell [ref=e101]: Category
+            - cell [ref=e102]:
+              - link [ref=e103] [cursor=pointer]:
+                - /url: https://kenney.nl/assets/category:2D
+                - text: 2D
+              - text: •
+              - link [ref=e104] [cursor=pointer]:
+                - /url: https://kenney.nl/assets/series:Pixel Platformer
+                - text: Pixel Platformer
+          - row [ref=e105]:
+            - cell [ref=e106]: Tile size
+            - cell [ref=e107]:
+              - link [ref=e108] [cursor=pointer]:
+                - /url: https://kenney.nl/assets/size:18
+                - text: 18 × 18
+          - row [ref=e109]:
+            - cell [ref=e110]: Files
+            - cell [ref=e111]: 200×
+          - row [ref=e112]:
+            - cell [ref=e113]: License
+            - cell [ref=e114]:
+              - link [ref=e115] [cursor=pointer]:
+                - /url: https://creativecommons.org/publicdomain/zero/1.0/
+                - text: Creative Commons CC0
+      - paragraph [ref=e55]:
+        - link [ref=e116] [cursor=pointer]:
+          - /url: "#inline-download"
+          - text: Download
+        - link [ref=e117] [cursor=pointer]:
+          - /url: https://kenney.itch.io/kenney-game-assets
+          - text: Get All-in-1 bundle
+      - table [ref=e58]:
+        - rowgroup [ref=e59]:
+          - row [ref=e118]:
+            - cell [ref=e119]:
+              - generic [ref=e62]: "1.2"
+              - text: Color adjustments, backgrounds
+          - row [ref=e120]:
+            - cell [ref=e121]:
+              - generic [ref=e65]: "1.0"
+    - generic [ref=e66]:
+      - link [ref=e69] [cursor=pointer]:
+        - /url: https://kenney.nl/media/pages/assets/pixel-platformer/9354b2aa6b-1696667871/preview.png
+        - img [ref=e70]
+      - generic [ref=e71]:
+        - link [ref=e73] [cursor=pointer]:
+          - /url: https://kenney.nl/media/pages/assets/pixel-platformer/bf585643f0-1696667860/samplea.png
+        - link [ref=e75] [cursor=pointer]:
+          - /url: https://kenney.nl/media/pages/assets/pixel-platformer/b6a81e5558-1696667866/sampleb.png
+  - contentinfo [ref=e76]:
+    - generic [ref=e77]:
+      - generic [ref=e78]: Copyright © 2010 - 2026 · All rights reserved
+      - generic [ref=e79]:
+        - link [ref=e122] [cursor=pointer]:
+          - /url: https://kenney.nl/support
+          - text: Support
+        - link [ref=e123] [cursor=pointer]:
+          - /url: https://kenney.nl/knowledge-base
+          - text: Knowledge Base
+        - link [ref=e124] [cursor=pointer]:
+          - /url: https://kenney.nl/privacy-policy
+          - text: Privacy Policy
+        - link [ref=e125] [cursor=pointer]:
+          - /url: https://kenney.nl/terms-of-service
+          - text: Terms of Service
+  - dialog "Dialog Window (Press escape to close)" [active] [ref=e126]:
+    - document [ref=e127]:
+      - generic [ref=e128]:
+        - generic [ref=e133]:
+          - heading "Consider a donation" [level=1] [ref=e134]
+          - paragraph [ref=e135]: The game assets you're about to download are available for free, thanks to the generosity of our amazing community. If you'd like to support and help keep them free for everyone, consider making a small donation!
+          - paragraph [ref=e136]:
+            - link "Donate" [ref=e137] [cursor=pointer]:
+              - /url: https://kenney.nl/donate
+          - paragraph [ref=e138]:
+            - link "Continue without donating..." [ref=e139] [cursor=pointer]:
+              - /url: https://kenney.nl/media/pages/assets/pixel-platformer/33bb4921eb-1696667883/kenney_pixel-platformer.zip
+        - button "Close (Press escape to close)" [ref=e140] [cursor=pointer]: ×
