@@ -1,9 +1,12 @@
 # Ice Climber 風格網頁遊戲（可擴充遊戲平台）
 
-> **狀態（最後更新時間：M1 完成 + 重構）**
+> **狀態（最後更新時間：M2 完成，色塊渲染版本）**
 > - ✅ M1 引擎骨架 + 選單 + Dummy 遊戲（commit `1e083fd`）
-> - 🟡 M2 Ice Climber 單人 MVP — **下一步**
-> - ⬜ M3 觸控覆蓋層 + 手機 RWD
+> - ✅ M2 Ice Climber 單人 MVP（commits `7bd2372`, `8f106d7`, `f60db43`，分支 `m2-iceclimber`）
+>   - **暫用色塊渲染**：尚未下載 Kenney 素材；玩家/冰塊/終點都是純色矩形
+>   - 完成項目：Random/AssetLoader/PixelFont、IceGrid、Player 物理（軸分離 sweep、變動跳、槌擊）、Camera deadzone、LevelGen、HUD、勝負流程
+>   - 待補（M3 前或 M5）：Kenney 素材替換色塊、`assets/LICENSES.md`
+> - 🟡 M3 觸控覆蓋層 + 手機 RWD — **下一步**
 > - ⬜ M4 雙人連線（PeerJS）
 > - ⬜ M5 收尾 + 音效 + 第二款遊戲
 
