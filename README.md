@@ -35,28 +35,28 @@ cd gamu
 python -m http.server 8000
 
 # 瀏覽器開啟
-# http://localhost:8000/docs/
+# http://localhost:8000/
 ```
 
 > **不能直接用 `file://` 開啟 `index.html`** — ES Modules 需要 HTTP 協定。
 
-替代方案：VS Code 的 Live Server 外掛、Node 的 `npx serve docs`。
+替代方案：VS Code 的 Live Server 外掛、Node 的 `npx serve`。
 
 ## 🚀 部署到 GitHub Pages
 
 1. 推到 GitHub `main` 分支
 2. Repo 設定 → **Settings → Pages**
    - Source: `Deploy from a branch`
-   - Branch: `main` / `/docs`
-3. 等約 1 分鐘，訪問 `https://<your-username>.github.io/<repo>/`
+   - Branch: `main` / `/ (root)`
+3. 等約 1 分鐘，訪問 `https://<your-username>.github.io/gamu/`
 
 第一次部署完，把上方的「線上遊玩」連結改成你的 URL。
 
 ## ➕ 新增一款遊戲
 
-1. 在 `docs/src/games/` 建立新資料夾，例如 `docs/src/games/my-game/`
-2. 仿照 `docs/src/games/dummy/` 建立 `index.js` 與 `MyScene.js`
-3. 在 `docs/src/main.js` 加：
+1. 在 `src/games/` 建立新資料夾，例如 `src/games/my-game/`
+2. 仿照 `src/games/dummy/` 建立 `index.js` 與 `MyScene.js`
+3. 在 `src/main.js` 加：
    ```js
    import MyGame from './games/my-game/index.js';
    registerGame(MyGame);
@@ -68,19 +68,18 @@ python -m http.server 8000
 ## 📂 目錄結構
 
 ```
-gamu/
-├── docs/                  ← GitHub Pages 從這發佈
-│   ├── index.html
-│   ├── styles.css
-│   ├── 404.html
-│   └── src/
-│       ├── main.js        啟動、註冊遊戲
-│       ├── engine/        共用引擎（GameLoop、Canvas、Input、Scene）
-│       ├── menu/          主選單、遊戲註冊
-│       ├── net/           （M4 才加入）PeerJS 連線
-│       └── games/         各款遊戲
-│           ├── dummy/     M1 假遊戲（驗證架構）
-│           └── iceclimber/（M2 起）
+gamu/                      ← repo 根 = GitHub Pages 根
+├── index.html
+├── styles.css
+├── 404.html
+├── src/
+│   ├── main.js            啟動、註冊遊戲
+│   ├── engine/            共用引擎（GameLoop、Canvas、Input、Scene）
+│   ├── menu/              主選單、遊戲註冊
+│   ├── net/               （M4 才加入）PeerJS 連線
+│   └── games/             各款遊戲
+│       ├── dummy/         M1 假遊戲（驗證架構）
+│       └── iceclimber/    （M2 起）
 ├── CLAUDE.md              專案約定（給未來 Claude session 讀）
 └── README.md
 ```
