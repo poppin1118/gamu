@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local server / cache
+.cache/
+.parcel-cache/
+.tmp/
+
+# Build artifacts (we have none for now, but keep for safety)
+dist/
+build/
+
+# Node (not used currently, but ignore if user installs anything)
+node_modules/
+
+# Project private notes
+note/
