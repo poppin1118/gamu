@@ -56,10 +56,12 @@ const loop = new GameLoop({
       setScene(s);
       return;
     }
-    inputMgr.beginTick();
     if (currentScene && typeof currentScene.update === 'function') {
       currentScene.update(dt);
     }
+    // 場景讀完輸入後才清掉 pressed/released 邊緣事件，
+    // 下一個 tick 之前若有新 keydown，會重新標記 pressed。
+    inputMgr.beginTick();
   },
   render: (alpha) => {
     canvas.clear('#000');
