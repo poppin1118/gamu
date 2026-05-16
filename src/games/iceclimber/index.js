@@ -5,5 +5,12 @@ export default {
   title: 'Ice Climber',
   supports: { singlePlayer: true, twoPlayer: false },
   factory: () => new IceClimberScene(),
-  assetManifest: { images: {}, json: {} },
+  assetManifest: {
+    images: {
+      tiles: './src/games/iceclimber/assets/Tilemap/tilemap_packed.png',
+      chars: './src/games/iceclimber/assets/Tilemap/tilemap-characters_packed.png',
+      backgrounds: './src/games/iceclimber/assets/Tilemap/tilemap-backgrounds_packed.png',
+    },
+    json: {},
+  },
 };

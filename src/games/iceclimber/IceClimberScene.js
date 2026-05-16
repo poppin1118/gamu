@@ -1,6 +1,8 @@
 import { Scene } from '../../engine/Scene.js';
 import { Btn } from '../../engine/Input.js';
 import { makeRng } from '../../engine/Random.js';
+import { loadAssets } from '../../engine/AssetLoader.js';
+import { SpriteSheet } from '../../engine/SpriteSheet.js';
 import {
   IceGrid, GRID_W, CELL_W, CELL_H, PLAYFIELD_W, TYPE,
 } from './IceGrid.js';
@@ -15,6 +17,30 @@ const VIEW_H = 240;
 const VIEW_W = 256;
 
 const END_DELAY = 1.0;
+
+const MANIFEST = {
+  images: {
+    tiles: './src/games/iceclimber/assets/Tilemap/tilemap_packed.png',
+    chars: './src/games/iceclimber/assets/Tilemap/tilemap-characters_packed.png',
+    backgrounds: './src/games/iceclimber/assets/Tilemap/tilemap-backgrounds_packed.png',
+  },
+  json: {},
+};
+
+const FRAME = {
+  ICE: 95,
+  SOLID: 40,
+  GOAL: 40,
+  P_IDLE: 13,
+  P_RUN_A: 13,
+  P_RUN_B: 14,
+  P_JUMP: 15,
+  P_FALL: 16,
+  P_HAMMER: 17,
+  BG_SKY: 0,
+};
+
+const RUN_ANIM_HZ = 8;
 
 export class IceClimberScene extends Scene {
   async init(ctx) {
@@ -44,10 +70,24 @@ export class IceClimberScene extends Scene {
     this.maxFloor = 0;
     this.gameState = 'playing';
     this.endTimer = 0;
+    this.elapsed = 0;
+
+    try {
+      const assets = await loadAssets(MANIFEST);
+      this.sheets = {
+        tiles: new SpriteSheet(assets.images.tiles, { tileSize: 18, spacing: 0, cols: 20 }),
+        chars: new SpriteSheet(assets.images.chars, { tileSize: 24, spacing: 0, cols: 9 }),
+        bg: new SpriteSheet(assets.images.backgrounds, { tileSize: 24, spacing: 0, cols: 8 }),
+      };
+    } catch (err) {
+      console.warn('Ice Climber 素材載入失敗，使用色塊 fallback', err);
+      this.sheets = null;
+    }
   }
 
   update(dt) {
     const input = this.ctx.input;
+    this.elapsed += dt;
 
     if (this.gameState === 'playing') {
       this.player.update(dt, input, this.grid);
@@ -126,26 +166,40 @@ export class IceClimberScene extends Scene {
         const cell = cellsRow[col];
         if (cell.type === TYPE.EMPTY) continue;
         const sx = col * CELL_W + PLAYFIELD_OFFSET_X;
-        if (cell.type === TYPE.ICE) {
-          c.fillStyle = cell.hits === 2 ? '#bfe2ff' : '#7fa8c8';
+        this._drawCell(c, cell, sx, sy, r === GOAL_ROW);
+      }
+    }
+  }
+
+  _drawCell(c, cell, sx, sy, isGoal) {
+    if (this.sheets) {
+      if (cell.type === TYPE.ICE) {
+        this.sheets.tiles.draw(c, FRAME.ICE, sx, sy, CELL_W, CELL_H);
+        if (cell.hits === 1) {
+          c.fillStyle = 'rgba(0, 0, 0, 0.35)';
           c.fillRect(sx, sy, CELL_W, CELL_H);
-          c.fillStyle = '#3f6088';
-          c.fillRect(sx, sy + CELL_H - 1, CELL_W, 1);
-          c.fillRect(sx, sy, 1, CELL_H);
-          if (cell.hits === 1) {
-            c.fillStyle = '#3f6088';
-            c.fillRect(sx + 3, sy + 2, 2, 1);
-            c.fillRect(sx + 8, sy + 4, 3, 1);
-            c.fillRect(sx + 5, sy + 6, 2, 1);
-          }
-        } else {
-          const isGoal = r === GOAL_ROW;
-          c.fillStyle = isGoal ? '#ffcc33' : '#888888';
+        }
+      } else {
+        this.sheets.tiles.draw(c, isGoal ? FRAME.GOAL : FRAME.SOLID, sx, sy, CELL_W, CELL_H);
+        if (isGoal) {
+          c.fillStyle = 'rgba(255, 204, 51, 0.45)';
           c.fillRect(sx, sy, CELL_W, CELL_H);
-          c.fillStyle = isGoal ? '#cc8810' : '#555555';
-          c.fillRect(sx, sy + CELL_H - 1, CELL_W, 1);
         }
       }
+      return;
+    }
+    // fallback 色塊
+    if (cell.type === TYPE.ICE) {
+      c.fillStyle = cell.hits === 2 ? '#bfe2ff' : '#7fa8c8';
+      c.fillRect(sx, sy, CELL_W, CELL_H);
+      c.fillStyle = '#3f6088';
+      c.fillRect(sx, sy + CELL_H - 1, CELL_W, 1);
+      c.fillRect(sx, sy, 1, CELL_H);
+    } else {
+      c.fillStyle = isGoal ? '#ffcc33' : '#888888';
+      c.fillRect(sx, sy, CELL_W, CELL_H);
+      c.fillStyle = isGoal ? '#cc8810' : '#555555';
+      c.fillRect(sx, sy + CELL_H - 1, CELL_W, 1);
     }
   }
 
@@ -164,13 +218,19 @@ export class IceClimberScene extends Scene {
     const px = this.player.x + PLAYFIELD_OFFSET_X;
     const py = this.player.y - camY;
 
-    c.fillStyle = '#ffcc33';
-    c.fillRect(px, py, PLAYER_W, PLAYER_H);
-    c.fillStyle = '#cc8810';
-    c.fillRect(px, py, PLAYER_W, 3);
-    c.fillStyle = '#000';
-    const eyeX = this.player.facing > 0 ? px + PLAYER_W - 4 : px + 2;
-    c.fillRect(eyeX, py + 5, 2, 2);
+    if (this.sheets) {
+      const frame = this._playerFrame();
+      const flipX = this.player.facing < 0;
+      this.sheets.chars.draw(c, frame, px - 2, py - 2, 16, 16, { flipX });
+    } else {
+      c.fillStyle = '#ffcc33';
+      c.fillRect(px, py, PLAYER_W, PLAYER_H);
+      c.fillStyle = '#cc8810';
+      c.fillRect(px, py, PLAYER_W, 3);
+      c.fillStyle = '#000';
+      const eyeX = this.player.facing > 0 ? px + PLAYER_W - 4 : px + 2;
+      c.fillRect(eyeX, py + 5, 2, 2);
+    }
 
     if (this.player.state === 'hammer') {
       const box = hammerHitbox(this.player);
@@ -180,6 +240,17 @@ export class IceClimberScene extends Scene {
       const handleX = this.player.facing > 0 ? px + PLAYER_W - 1 : px - 1;
       c.fillRect(handleX, py + 2, 2, 6);
     }
+  }
+
+  _playerFrame() {
+    const s = this.player.state;
+    if (s === 'hammer') return FRAME.P_HAMMER;
+    if (s === 'jump') return FRAME.P_JUMP;
+    if (s === 'fall') return FRAME.P_FALL;
+    if (s === 'run') {
+      return (Math.floor(this.elapsed * RUN_ANIM_HZ) % 2) ? FRAME.P_RUN_B : FRAME.P_RUN_A;
+    }
+    return FRAME.P_IDLE;
   }
 
   destroy() {}

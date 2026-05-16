@@ -28,3 +28,10 @@ node_modules/
 
 # Project private notes
 note/
+
+# Playwright MCP session snapshots & ad-hoc screenshots
+.playwright-mcp/
+/*.png
+!src/**/*.png
+!index*.png
+
