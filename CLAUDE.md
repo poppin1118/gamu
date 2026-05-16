@@ -82,14 +82,22 @@ python -m http.server 8000
 
 ## 里程碑進度
 - [x] **M1** 引擎骨架 + 選單 + Dummy 遊戲
-- [ ] **M2** Ice Climber 單人 MVP
+- [x] **M2** Ice Climber 單人 MVP（色塊渲染，素材待 M3 前補）
 - [ ] **M3** 觸控覆蓋層 + 手機 RWD
 - [ ] **M4** 雙人連線（PeerJS）
 - [ ] **M5** 收尾 + 音效 + 第二款遊戲
 
 ## 計畫檔
-完整計畫在使用者本機：
-`C:\Users\user\.claude\plans\html-ice-climber-github-playful-umbrella.md`
+完整計畫在 repo 內：`plans/html-ice-climber-github-playful-umbrella.md`
+
+## GameLoop 與 Input 的耦合
+- `update(dt)` 固定 60Hz；`render(ctx2d, alpha)` 收 0–1 插值因子，要做平滑動畫得自行用 alpha 內插上一/這一 tick 的狀態。
+- 每個 tick 順序：scene.update → `inputMgr.beginTick()`，所以 scene 在 update 內讀 `wasPressed/wasReleased` 看的是「本 tick 內新發生」的邊緣。
+- `main.js` 用 `loadingScene` 旗標讓 async `Scene.init()` 期間 update 跳過、render 畫 "LOADING..."。
+
+## 測試 / Lint
+- 沒有測試框架、沒有 linter、沒有 build step。
+- 純邏輯模組（Random / IceGrid / Player / LevelGen）可用 `node --input-type=module -e "..."` 做煙霧測試；DOM 依賴的部分一律靠瀏覽器手測。
 
 ## 不在範圍內
 排行榜、帳號、雲端存檔、3+ 人、客端預測 rollback、振動回饋、自架 TURN、i18n
