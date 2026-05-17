@@ -296,18 +296,34 @@ export class Player {
    */
   _doHammerHit(grid) {
     const center_y = this.y + PLAYER_H / 2;
-    const target_row = Math.ceil(-center_y / CELL_H);
-    // 用玩家中心欄 + facing 偏移，確保打到「前方那一欄」而不是玩家自己佔的欄。
+    const body_row = Math.ceil(-center_y / CELL_H);
+    const head_row = body_row + 1;
     const center_col = Math.floor((this.x + PLAYER_W / 2) / CELL_W);
-    const target_col = this.facing > 0 ? center_col + 1 : center_col - 1;
-    const cell = grid.cellAt(target_col, target_row);
-    if (cell && cell.type === TYPE.ICE) {
-      const broke = grid.hit(target_col, target_row, 1);
-      if (broke) this.brokeCells.push({ col: target_col, row: target_row, by: 'hammer' });
+    const front_col = this.facing > 0 ? center_col + 1 : center_col - 1;
+
+    // 候選優先順序：前方體高 → 前方頭頂 → 正上方。
+    // 一次只敲一格，但搜尋範圍涵蓋「走路擋路、跳起撞到、頭頂上方」三種常見情境。
+    const candidates = [
+      { col: front_col, row: body_row },
+      { col: front_col, row: head_row },
+      { col: center_col, row: head_row },
+    ];
+
+    let hit_col = front_col;
+    let hit_row = body_row;
+    for (const candidate of candidates) {
+      const cell = grid.cellAt(candidate.col, candidate.row);
+      if (cell && cell.type === TYPE.ICE) {
+        hit_col = candidate.col;
+        hit_row = candidate.row;
+        const broke = grid.hit(candidate.col, candidate.row, 1);
+        if (broke) this.brokeCells.push({ col: candidate.col, row: candidate.row, by: 'hammer' });
+        break;
+      }
     }
-    // 暴露槌擊目標格供場景做 Topi/Icicle 撃殺判定，避免重算 hitbox。
-    this.hammerTargetCol = target_col;
-    this.hammerTargetRow = target_row;
+
+    this.hammerTargetCol = hit_col;
+    this.hammerTargetRow = hit_row;
     this.hammerJustLanded = true;
   }
 }

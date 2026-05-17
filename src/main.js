@@ -7,7 +7,6 @@ import { AudioSystem } from './engine/Audio.js';
 import { registerGame, getGame } from './menu/GameRegistry.js';
 import { MainMenu } from './menu/MainMenu.js';
 import { LobbyScene } from './menu/LobbyScene.js';
-import DummyGame from './games/dummy/index.js';
 import IceClimberGame from './games/iceclimber/index.js';
 
 const canvas_el = document.getElementById('game');
@@ -19,7 +18,6 @@ const touch_overlay = new TouchOverlay({ root: touch_overlay_el, input_state: in
 touch_overlay.attach();
 const audio = new AudioSystem();
 
-registerGame(DummyGame);
 registerGame(IceClimberGame);
 
 const scene_ctx = {
