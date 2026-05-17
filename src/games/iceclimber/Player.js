@@ -17,6 +17,7 @@ export const JUMP_CUT_MUL = 2.2;
 
 export const HAMMER_DURATION = 0.25;
 export const HAMMER_HIT_T = 0.10;
+export const HAMMER_AIR_DRAG = 0.35;
 
 const EPS = 1e-6;
 
@@ -72,7 +73,8 @@ export class Player {
       const velocity_step = (move_dir === 0 ? decel : accel) * dt;
       this.vx = this._approach(this.vx, target_speed, velocity_step);
     } else {
-      this.vx = 0;
+      const hammer_decel = (this.onGround ? RUN_DECEL : AIR_DECEL * HAMMER_AIR_DRAG) * dt;
+      this.vx = this._approach(this.vx, 0, hammer_decel);
     }
 
     if (!is_hammering && this.onGround && input.wasPressed(Btn.A)) {
@@ -80,11 +82,8 @@ export class Player {
       this.onGround = false;
     }
 
-    if (!is_hammering && this.onGround && input.wasPressed(Btn.B)) {
-      this.state = 'hammer';
-      this.hammerTimer = 0;
-      this.hammerDidHit = false;
-      this.vx = 0;
+    if (!is_hammering && input.wasPressed(Btn.B)) {
+      this._startHammer();
     }
 
     if (this.state === 'hammer') {
@@ -127,6 +126,20 @@ export class Player {
     if (current_value < target_value) return Math.min(current_value + step_value, target_value);
     if (current_value > target_value) return Math.max(current_value - step_value, target_value);
     return target_value;
+  }
+
+  /**
+   * 進入槌擊狀態；地面槌擊會煞停，空中槌擊保留跳躍動量。
+   *
+   * @returns {void}
+   * @depends HAMMER_DURATION, HAMMER_HIT_T
+   */
+  _startHammer() {
+    this.state = 'hammer';
+    this.hammerTimer = 0;
+    this.hammerDidHit = false;
+    // 空中槌擊不能把角色釘在半空中，否則跳敲上方冰塊會失手。
+    if (this.onGround) this.vx = 0;
   }
 
   /**

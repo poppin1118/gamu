@@ -89,7 +89,7 @@ canvas#game {
 
 .touch-overlay__system {
   left: 50%;
-  bottom: max(22px, env(safe-area-inset-bottom));
+  top: max(12px, env(safe-area-inset-top));
   transform: translateX(-50%);
 }
 
@@ -194,6 +194,7 @@ body.portrait .touch-overlay__actions {
 }
 
 body.portrait .touch-overlay__system {
+  top: auto;
   bottom: calc(var(--touch-portrait-height) - 42px);
 }
 

@@ -199,9 +199,9 @@ export class IceClimberArt {
     const handle_x = direction > 0 ? screen_x + PLAYER_W - 1 : screen_x - 1;
     const head_x = direction > 0 ? screen_x + PLAYER_W + 1 : screen_x - 5;
     canvas_context.fillStyle = '#7a4a24';
-    canvas_context.fillRect(handle_x, screen_y + 2, 2, 9);
+    canvas_context.fillRect(handle_x, screen_y - 6, 2, 10);
     canvas_context.fillStyle = '#d8c08b';
-    canvas_context.fillRect(head_x, screen_y + 1, 5, 4);
+    canvas_context.fillRect(head_x, screen_y - 8, 5, 4);
 
     const hitbox = hammerHitbox(player);
     const hitbox_x = hitbox.x - player.x + screen_x;

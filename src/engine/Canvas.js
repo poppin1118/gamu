@@ -70,7 +70,7 @@ export class Canvas {
     const available_h = Math.max(this.lh, viewport_h - reserved_touch_h);
 
     const fit = Math.min(viewport_w / this.lw, available_h / this.lh);
-    const scale = Math.max(1, Math.floor(fit));
+    const scale = touch_visible ? Math.max(1, fit) : Math.max(1, Math.floor(fit));
     this.scale = scale;
     const css_w = this.lw * scale;
     const css_h = this.lh * scale;
