@@ -297,9 +297,9 @@ export class Player {
   _doHammerHit(grid) {
     const center_y = this.y + PLAYER_H / 2;
     const target_row = Math.ceil(-center_y / CELL_H);
-    const target_col = this.facing > 0
-      ? Math.floor((this.x + PLAYER_W) / CELL_W)
-      : Math.floor((this.x - 1) / CELL_W);
+    // 用玩家中心欄 + facing 偏移，確保打到「前方那一欄」而不是玩家自己佔的欄。
+    const center_col = Math.floor((this.x + PLAYER_W / 2) / CELL_W);
+    const target_col = this.facing > 0 ? center_col + 1 : center_col - 1;
     const cell = grid.cellAt(target_col, target_row);
     if (cell && cell.type === TYPE.ICE) {
       const broke = grid.hit(target_col, target_row, 1);
