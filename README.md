@@ -17,11 +17,15 @@
 
 觸控按鈕會在手機/平板自動顯示；桌機可加 `?touch=1` 強制測試，或用 `?touch=0` 強制關閉。
 
-## 👥 兩人連線玩法（M4 完成後）
+## 👥 兩人連線玩法（M4 進行中）
 
-1. **主機端**：選單 → 選擇遊戲 → **建立房間** → 看到 6 字代碼（例 `gamu-A7K9QX`）
-2. **客端**：選單 → 選擇遊戲 → **加入房間** → 輸入代碼 → 自動配對
+> 目前已有 M4 基礎版：主選單可切 `SINGLE / HOST / JOIN`，JOIN 使用 canvas 內 6 格代碼輸入，PeerJS 已固化在 `vendor/peerjs.min.js`。guest 端已加入 snapshot interpolation，host 可保留原房等待 guest 重連；跨裝置 WebRTC 仍待驗收。
+
+1. **主機端**：選單 → Ice Climber → `HOST` → 看到 6 字代碼（例 `gamu-A7K9QX`）
+2. **客端**：選單 → Ice Climber → `JOIN` → 用上下切字、左右切格，輸入 6 字代碼 → `START` 配對
 3. 兩邊都會看到遊戲畫面，一起爬塔
+
+斷線時 host 會保留房間等 guest 用原代碼重連，也可按 A 轉單人續玩；guest 可按 A 回 JOIN 大廳並預填原房號。
 
 兩台裝置不需要在同一個網路，透過 WebRTC P2P 直連。
 
@@ -77,8 +81,8 @@ gamu/                      ← repo 根 = GitHub Pages 根
 ├── src/
 │   ├── main.js            啟動、註冊遊戲
 │   ├── engine/            共用引擎（GameLoop、Canvas、Input、TouchOverlay、Scene）
-│   ├── menu/              主選單、遊戲註冊
-│   ├── net/               （M4 才加入）PeerJS 連線
+│   ├── menu/              主選單、LobbyScene、遊戲註冊
+│   ├── net/               PeerJS 連線、protocol、host/guest adapter
 │   └── games/             各款遊戲
 │       ├── dummy/         M1 假遊戲（驗證架構）
 │       └── iceclimber/    （M2 起）
@@ -92,7 +96,7 @@ gamu/                      ← repo 根 = GitHub Pages 根
 - [x] **M2** Ice Climber 單人 MVP（程式生關卡、爬到第 8 層）
 - [x] **M2.5** Ice Climber 畫面與手感優化
 - [x] **M3** 觸控覆蓋層 + 手機橫豎屏
-- [ ] **M4** 雙人連線（PeerJS WebRTC P2P）
+- [ ] 🟡 **M4** 雙人連線（PeerJS WebRTC P2P，基礎版已接入，待真機驗收）
 - [ ] **M5** 收尾 + 音效 + 第二款遊戲示範
 
 ## 📜 授權

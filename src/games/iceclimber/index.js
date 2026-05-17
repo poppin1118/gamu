@@ -13,7 +13,7 @@ function create_ice_climber_scene() {
 export default {
   id: 'iceclimber',
   title: 'Ice Climber',
-  supports: { singlePlayer: true, twoPlayer: false },
+  supports: { singlePlayer: true, twoPlayer: true },
   factory: create_ice_climber_scene,
   assetManifest: {
     images: {},

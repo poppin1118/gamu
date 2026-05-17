@@ -3,8 +3,10 @@ import { Canvas } from './engine/Canvas.js';
 import { InputManager } from './engine/Input.js';
 import { drawText } from './engine/PixelFont.js';
 import { TouchOverlay } from './engine/TouchOverlay.js';
+import { AudioSystem } from './engine/Audio.js';
 import { registerGame, getGame } from './menu/GameRegistry.js';
 import { MainMenu } from './menu/MainMenu.js';
+import { LobbyScene } from './menu/LobbyScene.js';
 import DummyGame from './games/dummy/index.js';
 import IceClimberGame from './games/iceclimber/index.js';
 
@@ -15,6 +17,7 @@ const input_mgr = new InputManager();
 input_mgr.attach(window);
 const touch_overlay = new TouchOverlay({ root: touch_overlay_el, input_state: input_mgr.state });
 touch_overlay.attach();
+const audio = new AudioSystem();
 
 registerGame(DummyGame);
 registerGame(IceClimberGame);
@@ -24,9 +27,26 @@ const scene_ctx = {
   input: input_mgr.state,
   input2: null,
   net: null,
+  audio,
+  launchOptions: {},
   launchGame,
+  openLobby,
   exitToMenu,
 };
+
+/**
+ * 在第一次 user gesture 內初始化 AudioContext（iOS Safari / Chrome autoplay policy）。
+ * 註冊 keydown 與 pointerdown 兩條路徑各一次，無論誰先觸發都會喚醒 audio。
+ *
+ * @returns {void}
+ * @depends AudioSystem.init
+ */
+function init_audio_on_first_gesture() {
+  const fire = () => { audio.init(); };
+  window.addEventListener('keydown', fire, { once: true });
+  window.addEventListener('pointerdown', fire, { once: true });
+}
+init_audio_on_first_gesture();
 
 let current_scene = null;
 let pending_scene = null;
@@ -64,16 +84,36 @@ async function set_scene(scene) {
  * 從遊戲註冊表建立指定遊戲的 Scene，交給下一個 tick 切換。
  *
  * @param {string} id - 遊戲模組 id。
+ * @param {{net?: object}} options - 遊戲啟動選項，例如 M4 net adapter。
  * @returns {Promise<void>} 排定切換後 resolve。
  * @depends getGame, GameModule.factory
  */
-async function launchGame(id) {
+async function launchGame(id, options = {}) {
   const mod = getGame(id);
   if (!mod) {
     console.error(`找不到遊戲: ${id}`);
     return;
   }
-  pending_scene = mod.factory();
+  scene_ctx.net = options.net || null;
+  scene_ctx.input2 = options.input2 || null;
+  scene_ctx.launchOptions = options;
+  pending_scene = mod.factory(options);
+}
+
+/**
+ * 開啟指定遊戲的 2P 配對大廳。
+ *
+ * @param {string} game_id - 要配對的遊戲 id。
+ * @param {'host'|'join'} mode - 建立房間或加入房間。
+ * @param {string} join_code - 可選的預填房間代碼。
+ * @returns {void}
+ * @depends LobbyScene
+ */
+function openLobby(game_id, mode, join_code = '') {
+  scene_ctx.net = null;
+  scene_ctx.input2 = null;
+  scene_ctx.launchOptions = {};
+  pending_scene = new LobbyScene({ game_id, mode, join_code });
 }
 
 /**
@@ -83,6 +123,12 @@ async function launchGame(id) {
  * @depends MainMenu
  */
 function exitToMenu() {
+  if (scene_ctx.net && typeof scene_ctx.net.destroy === 'function') {
+    scene_ctx.net.destroy();
+  }
+  scene_ctx.net = null;
+  scene_ctx.input2 = null;
+  scene_ctx.launchOptions = {};
   pending_scene = new MainMenu();
 }
 

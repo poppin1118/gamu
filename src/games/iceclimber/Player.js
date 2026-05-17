@@ -25,13 +25,15 @@ export class Player {
   /**
    * 建立玩家實體與可序列化的物理狀態。
    *
-   * @param {{x?: number, y?: number}} options - 初始座標設定。
+   * @param {{x?: number, y?: number, tunic_color?: string, tunic_shade?: string}} options - 初始座標與外觀設定。
    * @returns {Player} 玩家實體。
    * @depends Btn, IceGrid, hammerHitbox
    */
-  constructor({ x = 0, y = 0 } = {}) {
+  constructor({ x = 0, y = 0, tunic_color = '#2472d8', tunic_shade = '#174aa3' } = {}) {
     this.x = x;
     this.y = y;
+    this.tunicColor = tunic_color;
+    this.tunicShade = tunic_shade;
     this.vx = 0;
     this.vy = 0;
     this.facing = 1;
@@ -111,6 +113,52 @@ export class Player {
       else if (Math.abs(this.vx) > 0.01) this.state = 'run';
       else this.state = 'idle';
     }
+  }
+
+  /**
+   * 匯出玩家狀態供網路 snapshot 使用。
+   *
+   * @returns {object} 可 JSON 序列化的玩家狀態。
+   * @depends none
+   */
+  serialize() {
+    return {
+      x: this.x,
+      y: this.y,
+      vx: this.vx,
+      vy: this.vy,
+      facing: this.facing,
+      tunicColor: this.tunicColor,
+      tunicShade: this.tunicShade,
+      onGround: this.onGround,
+      state: this.state,
+      hammerTimer: this.hammerTimer,
+      hammerDidHit: this.hammerDidHit,
+      alive: this.alive,
+    };
+  }
+
+  /**
+   * 套用網路 snapshot 內的玩家狀態。
+   *
+   * @param {object} snapshot - serialize() 產生的玩家狀態。
+   * @returns {void}
+   * @depends none
+   */
+  applySnapshot(snapshot) {
+    if (!snapshot) return;
+    this.x = snapshot.x;
+    this.y = snapshot.y;
+    this.vx = snapshot.vx;
+    this.vy = snapshot.vy;
+    this.facing = snapshot.facing;
+    this.tunicColor = snapshot.tunicColor || this.tunicColor;
+    this.tunicShade = snapshot.tunicShade || this.tunicShade;
+    this.onGround = snapshot.onGround;
+    this.state = snapshot.state;
+    this.hammerTimer = snapshot.hammerTimer;
+    this.hammerDidHit = snapshot.hammerDidHit;
+    this.alive = snapshot.alive;
   }
 
   /**

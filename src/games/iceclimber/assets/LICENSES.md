@@ -19,3 +19,21 @@
 - `Tiles/Characters/`、`Tiles/Backgrounds/` — 個別角色/背景圖檔
 
 > 原始 `License.txt` 仍保留於壓縮包內。
+
+---
+
+## sfx/*.ogg — Kenney Impact Sounds + Interface Sounds
+
+- **來源**：
+  - https://kenney.nl/assets/impact-sounds（Impact Sounds）
+  - https://kenney.nl/assets/interface-sounds（Interface Sounds）
+- **作者**：Kenney（https://www.kenney.nl）
+- **授權**：[Creative Commons Zero (CC0)](https://creativecommons.org/publicdomain/zero/1.0/)
+- **下載日期**：2026-05-17
+
+### 對應關係（重新命名後 → 原始檔）
+- `sfx/jump.ogg`   ← Interface Sounds / `pluck_001.ogg`
+- `sfx/hammer.ogg` ← Impact Sounds / `impactPunch_heavy_001.ogg`
+- `sfx/break.ogg`  ← Impact Sounds / `impactGlass_light_002.ogg`
+- `sfx/win.ogg`    ← Interface Sounds / `confirmation_003.ogg`
+- `sfx/lose.ogg`   ← Interface Sounds / `error_004.ogg`

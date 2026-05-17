@@ -25,7 +25,7 @@ gamu/                     ← repo 根 = GitHub Pages 根
 │   ├── main.js           啟動、註冊遊戲、scene 切換
 │   ├── engine/           遊戲共用，與具體遊戲無關（含 TouchOverlay）
 │   ├── menu/             MainMenu、LobbyScene、GameRegistry
-│   ├── net/              M4 才加入 — PeerJS 包裝、訊息協定
+│   ├── net/              PeerJS 包裝、訊息協定、host/guest adapter
 │   └── games/<id>/       每款遊戲自包含一個資料夾
 ├── vendor/               固化的第三方函式庫（如 peerjs.min.js）
 ├── CLAUDE.md             本檔
@@ -58,7 +58,7 @@ gamu/                     ← repo 根 = GitHub Pages 根
 
 ## Scene 介面
 ```
-async init(ctx)       // ctx: {canvas, input, input2, net, launchGame, exitToMenu}
+async init(ctx)       // ctx: {canvas, input, input2, net, audio, launchGame, openLobby, exitToMenu}
 update(dt)            // 60Hz 固定步長
 render(ctx2d, alpha)  // 在邏輯解析度上畫
 destroy()             // 釋放資源
@@ -86,8 +86,12 @@ python -m http.server 8000
 - [x] **M2** Ice Climber 單人 MVP
 - [x] **M2.5** Ice Climber 程式化 pixel art + 手感優化
 - [x] **M3** 觸控覆蓋層 + 手機 RWD
-- [ ] **M4** 雙人連線（PeerJS）
-- [ ] **M5** 收尾 + 音效 + 第二款遊戲
+- [ ] 🟡 **M4** 雙人連線（PeerJS，host/join、guest interpolation、基礎重連已接入，待真機驗收）
+- [ ] 🟡 **M5** 收尾 + 音效 + 第二款遊戲
+  - ✅ `engine/Audio.js`（WebAudio 包裝，user gesture init）+ `scene_ctx.audio` 接入
+  - ⬜ CC0 音效素材整合（Kenney Impact/Interface Sounds）
+  - ⬜ 第二款遊戲（Snake/Pong 之一，驗證架構）
+  - ⬜ 記憶體洩漏檢查、LICENSES 整理
 
 ## 計畫檔
 完整計畫在 repo 內：`plans/html-ice-climber-github-playful-umbrella.md`
@@ -97,6 +101,28 @@ python -m http.server 8000
 - 每個 tick 順序：scene.update → `inputMgr.beginTick()`，所以 scene 在 update 內讀 `wasPressed/wasReleased` 看的是「本 tick 內新發生」的邊緣。
 - `main.js` 用 `loadingScene` 旗標讓 async `Scene.init()` 期間 update 跳過、render 畫 "LOADING..."。
 - `TouchOverlay` 只在 coarse pointer 裝置顯示；`?touch=1` 強制開啟，`?touch=0` 強制關閉。豎屏觸控模式下 `Canvas.js` 會保留底部控制帶高度。
+- `AudioSystem` 在第一次 `keydown` 或 `pointerdown` 時自動 init（iOS Safari / Chrome autoplay policy 要求 user gesture）。Scene 可透過 `ctx.audio.loadAll({name: url, ...})` 在 init 內預載，再用 `ctx.audio.play(name, { volume, loop })`。init 前的 load/play 會 silently no-op。
+
+## M4 連線切片現況
+- `vendor/peerjs.min.js` 已固化，`index.html` / `404.html` 會先載入 PeerJS 再載入 `main.js`。
+- `src/net/NetProtocol.js`：房間代碼、input bitfield、message type。
+- `src/net/PeerSession.js`：PeerJS host/join/send/onMessage/onDisconnect 包裝。
+- `src/net/NetAdapters.js`：host authoritative；guest 每 tick 傳 input，host 每 2 tick 傳 snapshot。
+- `src/menu/LobbyScene.js`：主選單 `HOST / JOIN` 入口，host 顯示 room code，join 使用 canvas 內 6 格輸入器（上下切字、左右切格、START 送出）。
+- `IceClimberScene` 目前支援單人、host 雙人模擬、guest snapshot buffer/interpolation；斷線時 host 保留房間等待同房號 guest 重連，也可 A 轉單人續玩，guest 可 A 回 JOIN 大廳並預填原房號。尚未做 guest prediction、TURN fallback。
+
+## 接續工作順序
+1. 先做真機驗收：`HOST` → `JOIN` → 斷線 → 同房號重連。
+2. 若真機畫面仍抖，優先調 `SNAPSHOT_INTERPOLATION_DELAY` / `SNAPSHOT_INTERVAL_TICKS`，不是先加 prediction。
+3. 若跨網路連不上，先判定是 PeerJS broker / NAT / 手機瀏覽器行為，再決定要不要補 TURN fallback。
+4. `M5` 之前不要重構遊戲架構，先把 `M4` 的收斂問題解完。
+
+## 接手時先看
+- `src/games/iceclimber/IceClimberScene.js`：net 狀態機、guest interpolation、斷線 overlay。
+- `src/net/PeerSession.js`：重連時不要把舊 connection 的 close 誤判成新連線的斷線。
+- `src/net/NetAdapters.js`：host 需在 open 後清 `disconnected`，並補送最後 snapshot。
+- `plans/html-ice-climber-github-playful-umbrella.md`：M4 現況與下一步。
+- `README.md`：使用者操作說明。
 
 ## 測試 / Lint
 - 沒有測試框架、沒有 linter、沒有 build step。

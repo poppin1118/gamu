@@ -163,9 +163,9 @@ export class IceClimberArt {
     canvas_context.fillStyle = '#ffffff';
     canvas_context.fillRect(screen_x + 2, body_y, 8, 3);
     canvas_context.fillRect(screen_x + 1, body_y + 2, 10, 2);
-    canvas_context.fillStyle = '#2472d8';
+    canvas_context.fillStyle = player.tunicColor || '#2472d8';
     canvas_context.fillRect(screen_x + 2, body_y + 4, 8, 7);
-    canvas_context.fillStyle = '#174aa3';
+    canvas_context.fillStyle = player.tunicShade || '#174aa3';
     canvas_context.fillRect(screen_x + 2, body_y + 9, 8, 3);
     canvas_context.fillStyle = '#ffd7a8';
     canvas_context.fillRect(screen_x + 4, body_y + 3, 4, 3);

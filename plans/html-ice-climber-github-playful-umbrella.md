@@ -1,6 +1,6 @@
 # Ice Climber 風格網頁遊戲（可擴充遊戲平台）
 
-> **狀態（最後更新時間：M3 完成，觸控覆蓋層版本）**
+> **狀態（最後更新時間：M4 基礎重連接入，待真機 WebRTC 驗收）**
 > - ✅ M1 引擎骨架 + 選單 + Dummy 遊戲（commit `1e083fd`）
 > - ✅ M2 Ice Climber 單人 MVP（commits `7bd2372`, `8f106d7`, `f60db43`，分支 `m2-iceclimber`）
 >   - 完成項目：Random/AssetLoader/PixelFont、IceGrid、Player 物理（軸分離 sweep、變動跳、槌擊）、Camera deadzone、LevelGen、HUD、勝負流程
@@ -10,8 +10,12 @@
 > - ✅ M3 觸控覆蓋層 + 手機 RWD
 >   - `engine/TouchOverlay.js`：DOM 虛擬按鈕、多點 pointer capture、`?touch=1` debug flag、失焦釋放按鍵
 >   - `styles.css` + `Canvas.js`：橫屏浮動控制、豎屏底部控制帶、iOS safe-area、canvas 預留控制區
-> - 🟡 M4 雙人連線（PeerJS）— **下一步**
-> - ⬜ M5 收尾 + 音效 + 第二款遊戲
+> - 🟡 M4 雙人連線（PeerJS）— **host/join、guest interpolation、基礎重連已接入，待跨裝置驗收**
+> - 🟡 M5 收尾 + 音效 + 第二款遊戲
+>   - ✅ `engine/Audio.js`：WebAudio 包裝；`scene_ctx.audio` 已接入；首次 keydown/pointerdown 自動 init
+>   - ⬜ CC0 音效素材整合（Kenney Impact/Interface）
+>   - ⬜ 第二款遊戲（架構驗證）
+>   - ⬜ 記憶體洩漏檢查、LICENSES 整理
 
 ---
 
@@ -31,7 +35,7 @@
    ```
    應該要看到 Gamu 選單、Dummy Bouncer 與 Ice Climber。
 
-3. 跟 Claude Code 說「**接續 M4，依照 plans/html-ice-climber-github-playful-umbrella.md**」即可。
+3. 跟 Claude Code 說「**接續 M4 真機驗收與網路打磨，依照 plans/html-ice-climber-github-playful-umbrella.md**」即可。
 
 ---
 
@@ -402,9 +406,40 @@ iPhone / Android 橫豎屏都能順手玩 Ice Climber。
 ## 目標
 兩台裝置（瀏覽器分頁或筆電 + 手機）能用 6 字房間代碼配對，合作玩 Ice Climber。
 
+## 目前狀態
+🟡 基礎版已完成，guest 端位置插值與基礎重連已接入，尚未做完整真機驗收。
+
+- `vendor/peerjs.min.js` 已固化，入口 HTML 會先載入 PeerJS。
+- `src/net/NetProtocol.js` 已完成 message type、room code、input bitfield。
+- `src/net/PeerSession.js` 已完成 PeerJS host/join/send/onMessage/onDisconnect 包裝。
+- `src/net/NetAdapters.js` 已完成 host authoritative 同步：guest 傳 input，host 每 2 tick 傳 snapshot。
+- `src/menu/LobbyScene.js` 已完成 HOST/JOIN 大廳；JOIN 使用 canvas 內 6 格輸入器，手機觸控也能輸入房號。
+- `MainMenu` 已支援 `SINGLE / HOST / JOIN` mode selector。
+- `IceClimberScene` 已支援 P1/P2、host 模擬、guest snapshot buffer/interpolation。
+- 斷線時 host 保留房間等待同房號 guest 重連，也可 A 轉單人續玩；guest 可 A 回 JOIN 大廳並預填原房號。
+
+### 接手優先順序
+1. 先在兩個本機瀏覽器驗證 `HOST` / `JOIN` / 斷線 / 重連。
+2. 再用手機 + 桌機測跨網路連線，觀察 PeerJS broker 與 NAT 行為。
+3. 如果 guest 畫面還是抖，先調 snapshot buffer 參數，不要先加 prediction。
+4. `M5` 的音效與第二款遊戲先不要碰，除非 `M4` 已經穩定。
+
+### 不要重做的東西
+- 不要重寫 `PeerSession.js` 的房間代碼流程。
+- 不要把 guest 改回「收到 snapshot 就直接硬套」。
+- 不要把 host 斷線時的保留房間行為拿掉，現在這是重連的前提。
+
+下一步優先順序：
+1. 兩個本機瀏覽器視窗實測 host/join。
+2. 手機 + 桌機跨網路實測 PeerJS broker/STUN。
+3. 手機端長時間遊玩觀察 guest interpolation 是否仍抖動。
+4. 若真機延遲仍明顯，再評估 guest prediction；若 NAT 失敗率高，再補 TURN fallback。
+
 ## 任務
 
 ### 1. 固化 PeerJS
+✅ 已完成，固定到 `vendor/peerjs.min.js`。
+
 下載 https://github.com/peers/peerjs/releases 的 `peerjs.min.js` 到 `vendor/peerjs.min.js`。
 
 在 `index.html` 引入：
@@ -415,6 +450,8 @@ iPhone / Android 橫豎屏都能順手玩 Ice Climber。
 PeerJS 會掛在 `window.Peer`。
 
 ### 2. 網路層
+✅ 基礎版已完成：`PeerSession.js`、`NetProtocol.js`、`NetAdapters.js`。
+
 建立 `src/net/`：
 
 - `PeerSession.js` — PeerJS 包裝
@@ -453,10 +490,12 @@ PeerJS 會掛在 `window.Peer`。
 
 - `GuestNetAdapter.js`
   - 每 tick 把 local input 打包送出
-  - 收 SNAPSHOT 呼叫 `scene.applySnapshot()`
+  - 收 SNAPSHOT 交給 scene 保存 buffer 並套用 authoritative 狀態
   - 兩個 snapshot 之間做插值
 
 ### 3. 大廳
+✅ 基礎版已完成：`LobbyScene.js` + 主選單 mode selector。JOIN 已換成 canvas 內 6 格輸入框。
+
 - `src/menu/LobbyScene.js`
   - Mode = `host`：產代碼、顯示、等對方連
   - Mode = `join`：6 格輸入框 + 連線
@@ -465,6 +504,8 @@ PeerJS 會掛在 `window.Peer`。
 主選單擴充：每個遊戲卡片下方加「2P 主機」「2P 加入」兩個選項（單人遊戲跳過）。
 
 ### 4. IceClimberScene 擴充支援雙人
+✅ 基礎版已完成：host authoritative、雙玩家、grid/player/camera/score snapshot、guest snapshot interpolation。尚未做 guest prediction。
+
 - 第二個 Player 實例
 - `serializeSnapshot()` 回傳完整狀態（雙方位置、grid diff、camY、score、floor）
 - `applySnapshot()` 套用，render 時對位置做插值
@@ -472,9 +513,11 @@ PeerJS 會掛在 `window.Peer`。
 - Guest 模式 update 退化為「只送輸入」，狀態完全由 snapshot 決定
 
 ### 5. 斷線處理
+🟡 基礎重連已完成，待真機驗收。
+
 - `dataConnection.on('close')` 觸發 `ctx.net.onDisconnect`
-- Host：暫停 5 秒等重連 → 否則顯示「對方斷線，繼續單人？」
-- Guest：顯示「失去連線」→ 回大廳並預填上次的代碼
+- Host：目前顯示 `LINK LOST`，保留原 Peer 房間等待 guest 用同房號重連；按 A 轉單人續玩
+- Guest：目前顯示 `LINK LOST`，按 A 回 JOIN 大廳並預填上次的代碼
 
 ## 驗收
 - 兩個瀏覽器視窗能配對、合作爬塔

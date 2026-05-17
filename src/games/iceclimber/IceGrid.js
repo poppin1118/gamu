@@ -149,4 +149,32 @@ export class IceGrid {
     }
     return false;
   }
+
+  /**
+   * 匯出冰磚網格供網路 snapshot 使用。
+   *
+   * @returns {{type: number, hits: number}[][]} 可 JSON 序列化的 cell rows。
+   * @depends none
+   */
+  serialize() {
+    return this.rows.map((row) => row.map((cell) => ({
+      type: cell.type,
+      hits: cell.hits,
+    })));
+  }
+
+  /**
+   * 套用網路 snapshot 內的冰磚網格。
+   *
+   * @param {{type: number, hits: number}[][]} rows - serialize() 產生的 rows。
+   * @returns {void}
+   * @depends none
+   */
+  applySnapshot(rows) {
+    if (!Array.isArray(rows)) return;
+    this.rows = rows.map((row) => row.map((cell) => ({
+      type: cell.type,
+      hits: cell.hits,
+    })));
+  }
 }
