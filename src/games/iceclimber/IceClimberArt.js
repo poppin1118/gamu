@@ -3,6 +3,7 @@ import { FLOOR_ROWS, GOAL_ROW } from './LevelGen.js';
 import { PLAYER_H, PLAYER_W } from './Player.js';
 import { TOPI_W, TOPI_H } from './Topi.js';
 import { ICICLE_W, ICICLE_H, ICICLE_STATE } from './Icicle.js';
+import { BIRD_W, BIRD_H } from './Nitpicker.js';
 
 const VIEW_W = 256;
 const VIEW_H = 240;
@@ -244,6 +245,113 @@ export class IceClimberArt {
     canvas_context.fillStyle = '#c9871a';
     canvas_context.fillRect(sx + 3, sy + TOPI_H - 1, 2, 1);
     canvas_context.fillRect(sx + TOPI_W - 5, sy + TOPI_H - 1, 2, 1);
+  }
+
+  /**
+   * 繪製獎勵關卡的冰凍蔬菜。type 決定外觀；taken=true 不畫。
+   *
+   * @param {CanvasRenderingContext2D} c - 2D canvas context。
+   * @param {{col: number, row: number, type: string, taken: boolean}} veg - 蔬菜資料。
+   * @param {number} offset_x - 遊戲區域左側偏移。
+   * @param {number} camera_y - 目前攝影機 Y 座標。
+   * @returns {void}
+   */
+  draw_vegetable(c, veg, offset_x, camera_y) {
+    if (veg.taken) return;
+    const sx = Math.floor(veg.col * CELL_W + offset_x + (CELL_W - 8) / 2);
+    const sy = Math.floor(-(veg.row + 1) * CELL_H - camera_y);
+
+    // 共用：冰晶光暈背景
+    c.fillStyle = 'rgba(220, 240, 255, 0.5)';
+    c.fillRect(sx - 1, sy + 1, 10, 6);
+
+    switch (veg.type) {
+      case 'eggplant':
+        c.fillStyle = '#6b3d8a'; c.fillRect(sx + 1, sy + 2, 6, 5);
+        c.fillStyle = '#9b6dc4'; c.fillRect(sx + 2, sy + 3, 1, 1);
+        c.fillStyle = '#4ea83a'; c.fillRect(sx + 3, sy + 1, 2, 2);
+        break;
+      case 'carrot':
+        c.fillStyle = '#e08a30'; c.fillRect(sx + 2, sy + 3, 4, 4);
+        c.fillStyle = '#ffb060'; c.fillRect(sx + 2, sy + 3, 1, 1);
+        c.fillStyle = '#4ea83a'; c.fillRect(sx + 2, sy + 1, 1, 2);
+        c.fillRect(sx + 4, sy + 1, 1, 2);
+        break;
+      case 'cabbage':
+        c.fillStyle = '#65a83a'; c.fillRect(sx + 1, sy + 2, 6, 5);
+        c.fillStyle = '#88c854'; c.fillRect(sx + 2, sy + 3, 4, 2);
+        c.fillStyle = '#3e7522'; c.fillRect(sx + 2, sy + 6, 4, 1);
+        break;
+      case 'fish':
+        c.fillStyle = '#a8b8d0'; c.fillRect(sx + 1, sy + 3, 5, 3);
+        c.fillStyle = '#d8e0f0'; c.fillRect(sx + 1, sy + 4, 3, 1);
+        c.fillStyle = '#a8b8d0'; c.fillRect(sx + 5, sy + 2, 2, 5);
+        c.fillStyle = '#ffd75a'; c.fillRect(sx + 2, sy + 4, 1, 1);
+        break;
+      case 'corn':
+        c.fillStyle = '#e8c038'; c.fillRect(sx + 2, sy + 2, 4, 5);
+        c.fillStyle = '#ffea7a'; c.fillRect(sx + 3, sy + 3, 2, 1);
+        c.fillRect(sx + 3, sy + 5, 2, 1);
+        c.fillStyle = '#4ea83a'; c.fillRect(sx + 2, sy + 1, 1, 2);
+        c.fillRect(sx + 5, sy + 1, 1, 2);
+        break;
+      default:
+        c.fillStyle = '#ff6666'; c.fillRect(sx + 1, sy + 2, 6, 5);
+    }
+  }
+
+  /**
+   * 繪製 Nitpicker（鳥）。活著翅膀拍動，死掉旋轉墜落。
+   *
+   * @param {CanvasRenderingContext2D} canvas_context - 2D canvas context。
+   * @param {Nitpicker} bird - 鳥的狀態。
+   * @param {number} offset_x - 遊戲區域左側偏移。
+   * @param {number} camera_y - 目前攝影機 Y 座標。
+   * @param {number} elapsed - 動畫時間。
+   * @returns {void}
+   * @depends BIRD_W, BIRD_H
+   */
+  draw_nitpicker(canvas_context, bird, offset_x, camera_y, elapsed) {
+    const sx = Math.floor(bird.x + offset_x);
+    const sy = Math.floor(bird.y - camera_y);
+    const flap = Math.floor(elapsed * 8) % 2 === 0 ? -1 : 1;
+    const wing_y_top = bird.alive ? sy + (flap < 0 ? -1 : 1) : sy + 1;
+
+    // 死掉用比較灰的色，活著用彩色
+    const body = bird.alive ? '#4a2a86' : '#5a5a5a';
+    const wing = bird.alive ? '#9b6ed8' : '#7a7a7a';
+    const beak = bird.alive ? '#ffd75a' : '#a08020';
+
+    // 身體
+    canvas_context.fillStyle = body;
+    canvas_context.fillRect(sx + 3, sy + 2, BIRD_W - 6, BIRD_H - 3);
+    canvas_context.fillRect(sx + 4, sy + 1, BIRD_W - 8, 1);
+
+    // 翅膀（會拍動）
+    canvas_context.fillStyle = wing;
+    if (bird.alive) {
+      if (flap < 0) {
+        canvas_context.fillRect(sx + 1, sy + 1, 3, 2);
+        canvas_context.fillRect(sx + BIRD_W - 4, sy + 1, 3, 2);
+      } else {
+        canvas_context.fillRect(sx, sy + 3, 3, 2);
+        canvas_context.fillRect(sx + BIRD_W - 3, sy + 3, 3, 2);
+      }
+    } else {
+      // 死掉翅膀下垂
+      canvas_context.fillRect(sx + 1, sy + 4, 2, 2);
+      canvas_context.fillRect(sx + BIRD_W - 3, sy + 4, 2, 2);
+    }
+
+    // 鳥嘴（指 facing 方向）
+    canvas_context.fillStyle = beak;
+    const beak_x = bird.facing > 0 ? sx + BIRD_W - 1 : sx - 1;
+    canvas_context.fillRect(beak_x, sy + 3, 2, 1);
+
+    // 眼睛
+    canvas_context.fillStyle = '#ffffff';
+    const eye_x = bird.facing > 0 ? sx + BIRD_W - 4 : sx + 3;
+    canvas_context.fillRect(eye_x, sy + 2, 1, 1);
   }
 
   /**

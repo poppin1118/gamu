@@ -82,16 +82,17 @@ python -m http.server 8000
 - 站點 URL：`https://<user>.github.io/gamu/`
 
 ## 里程碑進度
-- [x] **M1** 引擎骨架 + 選單 + Dummy 遊戲
+- [x] **M1** 引擎骨架 + 選單（Dummy 範例已於 M5 移除）
 - [x] **M2** Ice Climber 單人 MVP
 - [x] **M2.5** Ice Climber 程式化 pixel art + 手感優化
 - [x] **M3** 觸控覆蓋層 + 手機 RWD
 - [ ] 🟡 **M4** 雙人連線（PeerJS，host/join、guest interpolation、基礎重連已接入，待真機驗收）
-- [ ] 🟡 **M5** 收尾 + 音效 + 第二款遊戲
+- [ ] 🟡 **M5** 收尾 + 音效 + Ice Climber 內容擴充
   - ✅ `engine/Audio.js`（WebAudio 包裝，user gesture init）+ `scene_ctx.audio` 接入
-  - ⬜ CC0 音效素材整合（Kenney Impact/Interface Sounds）
-  - ⬜ 第二款遊戲（Snake/Pong 之一，驗證架構）
+  - ✅ Kenney Impact/Interface SFX 整合（jump/hammer/break/win/lose）
+  - ✅ Ice Climber 加 Topi（紅鴨）、Icicle（冰柱）、Nitpicker（鳥）、Bonus 蔬菜關卡
   - ⬜ 記憶體洩漏檢查、LICENSES 整理
+  - ⬜（可選）第二款遊戲（架構驗證）
 
 ## 計畫檔
 完整計畫在 repo 內：`plans/html-ice-climber-github-playful-umbrella.md`
@@ -111,17 +112,30 @@ python -m http.server 8000
 - `src/menu/LobbyScene.js`：主選單 `HOST / JOIN` 入口，host 顯示 room code，join 使用 canvas 內 6 格輸入器（上下切字、左右切格、START 送出）。
 - `IceClimberScene` 目前支援單人、host 雙人模擬、guest snapshot buffer/interpolation；斷線時 host 保留房間等待同房號 guest 重連，也可 A 轉單人續玩，guest 可 A 回 JOIN 大廳並預填原房號。尚未做 guest prediction、TURN fallback。
 
+## M5 內容擴充現況（2026-05 完成）
+- **Hammer**：`Player._doHammerHit` 改成單格 1 damage，候選優先序 `前方體高 → 前方頭頂 → 正上方`；player 對外暴露 `hammerJustLanded` / `hammerTargetCol` / `hammerTargetRow` 給 scene 做敵人撃殺判定。
+- **LevelGen**：gap 密度收緊到一般列 1..2、floor 線 1..2。
+- **Topi.js**（紅鴨）：14×8、沿 floor-line 走、撞玩家推飛、hammer 同 cell 秒殺 +200。spawn 規則：每 floor-line 約 65% 機率出 1 隻。
+- **Icicle.js**（冰柱）：4×8、狀態機 `HANGING/SHAKING/FALLING/DEAD`、撞玩家 → `gameState='lost'`、hammer 預先打碎 +50。
+- **Nitpicker.js**（鳥）：12×8、不受 grid 影響、定時 spawn（玩家過 floor 2 後）、撞玩家推飛、hammer +500、墜落 1.5s 後 despawn。
+- **Bonus 蔬菜關**：`IceClimberScene.stage_mode='climb'|'bonus'`；過 floor 8 自動進入；固定 4 平台、10 蔬菜、20s 倒數；每個 +300、全收完 +500；結束 → `gameState='bonus_done'`。
+- **Audio**：`engine/Audio.js`，首次 keydown/pointerdown init；load 未 init 時先 fetch 暫存 ArrayBuffer。SFX 在 `src/games/iceclimber/assets/sfx/`（jump/hammer/break/win/lose，Kenney CC0）。
+- **Snapshot 擴充**：`serializeSnapshot` 新增 `topis / icicles / nitpickers / bird_spawn_timer / stage_mode / bonus_timer / vegetables`。
+- **Dummy Bouncer 已移除**：選單只剩 Ice Climber。
+
 ## 接續工作順序
-1. 先做真機驗收：`HOST` → `JOIN` → 斷線 → 同房號重連。
-2. 若真機畫面仍抖，優先調 `SNAPSHOT_INTERPOLATION_DELAY` / `SNAPSHOT_INTERVAL_TICKS`，不是先加 prediction。
-3. 若跨網路連不上，先判定是 PeerJS broker / NAT / 手機瀏覽器行為，再決定要不要補 TURN fallback。
-4. `M5` 之前不要重構遊戲架構，先把 `M4` 的收斂問題解完。
+1. **（待做）M5 收尾**：記憶體洩漏檢查（反覆 MainMenu ↔ IceClimber 切換 100+ 次、`getEventListeners(window)` 抓殘留、Scene.destroy() 清 listener）。
+2. **（待做）LICENSES / README 整理**：補正式 GH Pages URL、repo 根放 `LICENSE`（MIT 建議）。
+3. **（可選）第二款遊戲**：Snake / Pong / Memory Match 任選，驗證 GameRegistry 擴充不需碰 engine。
+4. **（M4 仍待）真機驗收**：`HOST` / `JOIN` / 斷線 / 同房號重連；若畫面抖，先調 `SNAPSHOT_INTERPOLATION_DELAY` / `SNAPSHOT_INTERVAL_TICKS`，不要先加 prediction。
 
 ## 接手時先看
-- `src/games/iceclimber/IceClimberScene.js`：net 狀態機、guest interpolation、斷線 overlay。
-- `src/net/PeerSession.js`：重連時不要把舊 connection 的 close 誤判成新連線的斷線。
-- `src/net/NetAdapters.js`：host 需在 open 後清 `disconnected`，並補送最後 snapshot。
-- `plans/html-ice-climber-github-playful-umbrella.md`：M4 現況與下一步。
+- `src/games/iceclimber/IceClimberScene.js`：含 climb + bonus 雙 stage_mode、敵人 collision/kill helper、guest snapshot interpolation、斷線 overlay。
+- `src/games/iceclimber/Player.js`：`_doHammerHit` 候選格邏輯；`hammerJustLanded` 旗標 / `hammerTargetCol/Row` 給場景做敵人撃殺。
+- `src/games/iceclimber/{Topi,Icicle,Nitpicker}.js`：各自的物理 + snapshot；spawn helper 在檔尾。
+- `src/games/iceclimber/Hud.js`：bonus_timer 顯示與 BONUS CLEAR overlay。
+- `src/net/{PeerSession,NetAdapters}.js`：M4 重連邏輯（重連時不要把舊 connection close 誤判成新連線斷線；host open 後要清 `disconnected` 並補送最後 snapshot）。
+- `plans/html-ice-climber-github-playful-umbrella.md`：M5 完成項目與下一步。
 - `README.md`：使用者操作說明。
 
 ## 測試 / Lint

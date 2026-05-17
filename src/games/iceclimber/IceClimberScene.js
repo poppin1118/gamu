@@ -12,6 +12,7 @@ import { IceClimberArt } from './IceClimberArt.js';
 import { renderHud } from './Hud.js';
 import { Topi, spawnTopis } from './Topi.js';
 import { Icicle, spawnIcicles, ICICLE_STATE } from './Icicle.js';
+import { Nitpicker, spawnNitpickerAtCamera } from './Nitpicker.js';
 
 export const PLAYFIELD_OFFSET_X = (256 - PLAYFIELD_W) / 2;
 const VIEW_H = 240;
@@ -88,6 +89,11 @@ export class IceClimberScene extends Scene {
     this.break_effects = [];
     this.topis = spawnTopis(this.rng, this.grid);
     this.icicles = spawnIcicles(this.rng, this.grid);
+    this.nitpickers = [];
+    this.bird_spawn_timer = 4 + this.rng.next() * 3;
+    this.stage_mode = 'climb';
+    this.bonus_timer = 0;
+    this.vegetables = [];
     this.net_disconnected = false;
     this.net_disconnect_timer = 0;
     this.snapshot_buffer = [];
@@ -126,6 +132,15 @@ export class IceClimberScene extends Scene {
       return;
     }
 
+    if (this.gameState === 'playing' && this.stage_mode === 'bonus') {
+      this._updateBonus(dt, input);
+      if (this.net_role === 'host' && this.net) {
+        this.net.afterTick(this.serializeSnapshot());
+        this.net.beginTick();
+      }
+      return;
+    }
+
     if (this.gameState === 'playing') {
       const players = this._activePlayers();
       const player_inputs = [input, this._getRemoteInput()];
@@ -134,9 +149,12 @@ export class IceClimberScene extends Scene {
       });
       this._updateTopis(dt);
       this._updateIcicles(dt, players);
+      this._updateNitpickers(dt);
       this._resolveTopiPlayerCollisions(players);
       this._resolveTopiHammerKills(players);
       this._resolveIcicleHammerHits(players);
+      this._resolveNitpickerPlayerCollisions(players);
+      this._resolveNitpickerHammerKills(players);
       const icicle_killed_player = this._checkIcicleKillsPlayer(players);
       if (icicle_killed_player) {
         this.gameState = 'lost';
@@ -181,7 +199,9 @@ export class IceClimberScene extends Scene {
     } else {
       this.endTimer += dt;
       if (this.endTimer >= END_DELAY) {
-        if (input.wasPressed(Btn.START) || input.wasPressed(Btn.A)) {
+        if (this.gameState === 'won' && this.stage_mode === 'climb') {
+          this._enterBonusStage();
+        } else if (input.wasPressed(Btn.START) || input.wasPressed(Btn.A)) {
           this.ctx.exitToMenu();
         }
       }
@@ -216,9 +236,21 @@ export class IceClimberScene extends Scene {
     for (const icicle of this.icicles) {
       this.art.draw_icicle(canvas_context, icicle, PLAYFIELD_OFFSET_X, camera_y, elapsed);
     }
+    for (const bird of this.nitpickers) {
+      this.art.draw_nitpicker(canvas_context, bird, PLAYFIELD_OFFSET_X, camera_y, elapsed);
+    }
+    for (const veg of this.vegetables) {
+      this.art.draw_vegetable(canvas_context, veg, PLAYFIELD_OFFSET_X, camera_y);
+    }
     this.art.draw_break_effects(canvas_context, this.break_effects, PLAYFIELD_OFFSET_X, camera_y);
     players.forEach((player) => this._drawPlayer(canvas_context, player, camera_y, elapsed));
-    renderHud(canvas_context, { score: this.score, floor: this.maxFloor, state: this.gameState });
+    renderHud(canvas_context, {
+      score: this.score,
+      floor: this.maxFloor,
+      state: this.gameState,
+      stage_mode: this.stage_mode,
+      bonus_timer: this.bonus_timer,
+    });
     if (this.net_disconnected) this._drawDisconnectOverlay(canvas_context);
   }
 
@@ -242,6 +274,11 @@ export class IceClimberScene extends Scene {
       elapsed: this.elapsed,
       topis: this.topis.map((topi) => topi.serialize()),
       icicles: this.icicles.map((icicle) => icicle.serialize()),
+      nitpickers: this.nitpickers.map((bird) => bird.serialize()),
+      bird_spawn_timer: this.bird_spawn_timer,
+      stage_mode: this.stage_mode,
+      bonus_timer: this.bonus_timer,
+      vegetables: this.vegetables.map((v) => ({ ...v })),
     };
   }
 
@@ -279,6 +316,15 @@ export class IceClimberScene extends Scene {
       this.icicles.length = snapshot.icicles.length;
       for (let i = 0; i < snapshot.icicles.length; i++) this.icicles[i].applySnapshot(snapshot.icicles[i]);
     }
+    if (Array.isArray(snapshot.nitpickers)) {
+      while (this.nitpickers.length < snapshot.nitpickers.length) this.nitpickers.push(new Nitpicker());
+      this.nitpickers.length = snapshot.nitpickers.length;
+      for (let i = 0; i < snapshot.nitpickers.length; i++) this.nitpickers[i].applySnapshot(snapshot.nitpickers[i]);
+    }
+    if (typeof snapshot.bird_spawn_timer === 'number') this.bird_spawn_timer = snapshot.bird_spawn_timer;
+    if (snapshot.stage_mode) this.stage_mode = snapshot.stage_mode;
+    if (typeof snapshot.bonus_timer === 'number') this.bonus_timer = snapshot.bonus_timer;
+    if (Array.isArray(snapshot.vegetables)) this.vegetables = snapshot.vegetables.map((v) => ({ ...v }));
   }
 
   /**
@@ -684,6 +730,192 @@ export class IceClimberScene extends Scene {
         topi.kill();
         this.score += 200;
         this._playSfx('break', { volume: 0.7 });
+      }
+    }
+  }
+
+  /**
+   * 進入獎勵關卡：清掉敵人與冰柱，重建 SOLID 平台、撒蔬菜、重設玩家位置與固定攝影機。
+   *
+   * @returns {void}
+   * @depends IceGrid, Player
+   */
+  _enterBonusStage() {
+    this.stage_mode = 'bonus';
+    this.gameState = 'playing';
+    this.endTimer = 0;
+    this.bonus_timer = 20;
+    this.topis = [];
+    this.icicles = [];
+    this.nitpickers = [];
+    this.break_effects = [];
+
+    const ROW_GROUND = 0;
+    const ROW_P1 = 3;
+    const ROW_P2 = 6;
+    const ROW_P3 = 9;
+    const ROW_TOP = 13;
+    const BONUS_ROWS = 16;
+
+    this.grid = new IceGrid();
+    for (let row = 0; row < BONUS_ROWS; row++) {
+      this.grid.setRow(row, new Array(GRID_W).fill(TYPE.EMPTY));
+    }
+    this.grid.setRow(ROW_GROUND, new Array(GRID_W).fill(TYPE.SOLID));
+
+    const p1 = new Array(GRID_W).fill(TYPE.EMPTY);
+    for (let c = 0; c <= 3; c++) p1[c] = TYPE.SOLID;
+    this.grid.setRow(ROW_P1, p1);
+
+    const p2 = new Array(GRID_W).fill(TYPE.EMPTY);
+    for (let c = 4; c <= 7; c++) p2[c] = TYPE.SOLID;
+    this.grid.setRow(ROW_P2, p2);
+
+    const p3 = new Array(GRID_W).fill(TYPE.EMPTY);
+    for (let c = 0; c <= 3; c++) p3[c] = TYPE.SOLID;
+    this.grid.setRow(ROW_P3, p3);
+
+    const top = new Array(GRID_W).fill(TYPE.EMPTY);
+    for (let c = 4; c <= 7; c++) top[c] = TYPE.SOLID;
+    this.grid.setRow(ROW_TOP, top);
+
+    this.vegetables = [
+      { col: 4, row: ROW_GROUND, type: 'eggplant', taken: false },
+      { col: 6, row: ROW_GROUND, type: 'carrot', taken: false },
+      { col: 1, row: ROW_P1, type: 'cabbage', taken: false },
+      { col: 3, row: ROW_P1, type: 'fish', taken: false },
+      { col: 5, row: ROW_P2, type: 'corn', taken: false },
+      { col: 7, row: ROW_P2, type: 'eggplant', taken: false },
+      { col: 1, row: ROW_P3, type: 'cabbage', taken: false },
+      { col: 3, row: ROW_P3, type: 'fish', taken: false },
+      { col: 5, row: ROW_TOP, type: 'corn', taken: false },
+      { col: 7, row: ROW_TOP, type: 'carrot', taken: false },
+    ];
+
+    const spawn_col = 4;
+    const spawn_x = spawn_col * CELL_W + (CELL_W - PLAYER_W) / 2;
+    this.player.x = spawn_x;
+    this.player.y = -PLAYER_H - 2;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.player.state = 'idle';
+    this.player.facing = 1;
+    if (this.player2) {
+      this.player2.x = 5 * CELL_W + (CELL_W - PLAYER_W) / 2;
+      this.player2.y = -PLAYER_H - 2;
+      this.player2.vx = 0;
+      this.player2.vy = 0;
+      this.player2.state = 'idle';
+    }
+
+    // 固定攝影機，把整個獎勵舞台塞進畫面（hud 佔頂端 24 px）。
+    this.camera.y = -(ROW_TOP + 3) * CELL_H;
+  }
+
+  /**
+   * 獎勵關卡 update：玩家正常移動跳躍、無 hammer 破壞（platform 全 SOLID）、收集蔬菜、倒數時間。
+   *
+   * @param {number} dt - 固定步長秒數。
+   * @param {InputState} input - 本機輸入。
+   * @returns {void}
+   * @depends Player.update, AudioSystem.play
+   */
+  _updateBonus(dt, input) {
+    const players = this._activePlayers();
+    const player_inputs = [input, this._getRemoteInput()];
+    players.forEach((player, idx) => player.update(dt, player_inputs[idx], this.grid));
+
+    const VEG_W = 8;
+    const VEG_H = 8;
+    for (const veg of this.vegetables) {
+      if (veg.taken) continue;
+      const veg_x = veg.col * CELL_W + (CELL_W - VEG_W) / 2;
+      const veg_y = -(veg.row + 1) * CELL_H;
+      for (const player of players) {
+        if (player.rightX <= veg_x || player.leftX >= veg_x + VEG_W) continue;
+        if (player.feetY <= veg_y || player.y >= veg_y + VEG_H) continue;
+        veg.taken = true;
+        this.score += 300;
+        this._playSfx('win', { volume: 0.35 });
+        break;
+      }
+    }
+
+    this.bonus_timer -= dt;
+    const all_collected = this.vegetables.every((v) => v.taken);
+    if (this.bonus_timer <= 0 || all_collected) {
+      if (all_collected) this.score += 500; // 全收完額外獎勵
+      this.gameState = 'bonus_done';
+      this.endTimer = 0;
+      this._playSfx('win', { volume: 0.7 });
+    }
+
+    if (input.wasPressed(Btn.START)) this.ctx.exitToMenu();
+  }
+
+  /**
+   * 推進 Nitpicker：飛行、墜落、移除離場個體；玩家通過 floor 2 後啟用 spawn 計時器。
+   *
+   * @param {number} dt - 固定步長秒數。
+   * @returns {void}
+   * @depends Nitpicker.update, spawnNitpickerAtCamera
+   */
+  _updateNitpickers(dt) {
+    for (const bird of this.nitpickers) bird.update(dt);
+    this.nitpickers = this.nitpickers.filter((bird) => !bird.shouldDespawn());
+
+    if (this.maxFloor < 2) return;
+    this.bird_spawn_timer -= dt;
+    if (this.bird_spawn_timer > 0) return;
+    if (this.nitpickers.length >= 2) {
+      this.bird_spawn_timer = 1;
+      return;
+    }
+    this.nitpickers.push(spawnNitpickerAtCamera(this.rng, this.camera.y));
+    this.bird_spawn_timer = 5 + this.rng.next() * 4;
+  }
+
+  /**
+   * Nitpicker 撞玩家：把玩家向 bird.facing 方向推、稍微抬起，不致死。
+   *
+   * @param {Player[]} players - 本 tick 的玩家陣列。
+   * @returns {void}
+   */
+  _resolveNitpickerPlayerCollisions(players) {
+    for (const player of players) {
+      for (const bird of this.nitpickers) {
+        if (!bird.alive) continue;
+        if (player.rightX <= bird.leftX || player.leftX >= bird.rightX) continue;
+        if (player.feetY <= bird.y || player.y >= bird.feetY) continue;
+        player.vx = bird.facing * 80;
+        if (player.onGround) player.vy = -90;
+      }
+    }
+  }
+
+  /**
+   * 槌擊剛落下時，若 Nitpicker AABB 與 hammer target cell 重疊則 kill。+500 分。
+   *
+   * @param {Player[]} players - 本 tick 的玩家陣列。
+   * @returns {void}
+   */
+  _resolveNitpickerHammerKills(players) {
+    for (const player of players) {
+      if (!player.hammerJustLanded) continue;
+      const col = player.hammerTargetCol;
+      const row = player.hammerTargetRow;
+      if (col == null || row == null) continue;
+      const cell_left = col * CELL_W;
+      const cell_right = cell_left + CELL_W;
+      const cell_top = -row * CELL_H;
+      const cell_bottom = cell_top + CELL_H;
+      for (const bird of this.nitpickers) {
+        if (!bird.alive) continue;
+        if (bird.rightX <= cell_left || bird.leftX >= cell_right) continue;
+        if (bird.feetY <= cell_top || bird.y >= cell_bottom) continue;
+        bird.kill();
+        this.score += 500;
+        this._playSfx('break', { volume: 0.65 });
       }
     }
   }

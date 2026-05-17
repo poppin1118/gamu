@@ -12,7 +12,7 @@ const SCREEN_H = 240;
  * @returns {void}
  * @depends drawText, TOTAL_FLOORS
  */
-export function renderHud(c, { score, floor, state }) {
+export function renderHud(c, { score, floor, state, stage_mode = 'climb', bonus_timer = 0 }) {
   const top_score = Math.max(score, 0);
 
   c.fillStyle = '#10172f';
@@ -24,19 +24,31 @@ export function renderHud(c, { score, floor, state }) {
   drawText(c, pad(score, 6), 8, 14, { scale: 1, color: '#ffffff' });
   drawText(c, 'TOP', 104, 4, { scale: 1, color: '#ffd86a' });
   drawText(c, pad(top_score, 6), 96, 14, { scale: 1, color: '#ffffff' });
-  drawText(c, `FLOOR ${pad(floor, 2)}/${pad(TOTAL_FLOORS, 2)}`, SCREEN_W - 4, 9,
-    { scale: 1, color: '#9cf7ff', align: 'right' });
+
+  if (stage_mode === 'bonus') {
+    const t = Math.max(0, bonus_timer).toFixed(1);
+    drawText(c, `BONUS ${t}`, SCREEN_W - 4, 9,
+      { scale: 1, color: '#ffd86a', align: 'right' });
+  } else {
+    drawText(c, `FLOOR ${pad(floor, 2)}/${pad(TOTAL_FLOORS, 2)}`, SCREEN_W - 4, 9,
+      { scale: 1, color: '#9cf7ff', align: 'right' });
+  }
 
   if (state === 'won') {
     overlay(c);
-    drawText(c, 'YOU MADE IT', SCREEN_W / 2, 90, { scale: 2, color: '#ffef6a', align: 'center' });
-    drawText(c, `SCORE ${score}`, SCREEN_W / 2, 120, { scale: 1, color: '#ffffff', align: 'center' });
-    drawText(c, 'PRESS START', SCREEN_W / 2, 150, { scale: 1, color: '#a8b0c0', align: 'center' });
+    drawText(c, 'YOU MADE IT', SCREEN_W / 2, 80, { scale: 2, color: '#ffef6a', align: 'center' });
+    drawText(c, 'BONUS STAGE NEXT', SCREEN_W / 2, 108, { scale: 1, color: '#ffffff', align: 'center' });
+    drawText(c, `SCORE ${score}`, SCREEN_W / 2, 128, { scale: 1, color: '#ffffff', align: 'center' });
   } else if (state === 'lost') {
     overlay(c);
     drawText(c, 'GAME OVER', SCREEN_W / 2, 90, { scale: 2, color: '#ff6666', align: 'center' });
     drawText(c, `SCORE ${score}`, SCREEN_W / 2, 120, { scale: 1, color: '#ffffff', align: 'center' });
     drawText(c, 'PRESS START', SCREEN_W / 2, 150, { scale: 1, color: '#a8b0c0', align: 'center' });
+  } else if (state === 'bonus_done') {
+    overlay(c);
+    drawText(c, 'BONUS CLEAR', SCREEN_W / 2, 80, { scale: 2, color: '#ffef6a', align: 'center' });
+    drawText(c, `FINAL ${score}`, SCREEN_W / 2, 116, { scale: 1, color: '#ffffff', align: 'center' });
+    drawText(c, 'PRESS START', SCREEN_W / 2, 140, { scale: 1, color: '#a8b0c0', align: 'center' });
   }
 }
 

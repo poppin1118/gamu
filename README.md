@@ -61,7 +61,7 @@ python -m http.server 8000
 ## ➕ 新增一款遊戲
 
 1. 在 `src/games/` 建立新資料夾，例如 `src/games/my-game/`
-2. 仿照 `src/games/dummy/` 建立 `index.js` 與 `MyScene.js`
+2. 仿照 `src/games/iceclimber/` 建立 `index.js` 與 `MyScene.js`
 3. 在 `src/main.js` 加：
    ```js
    import MyGame from './games/my-game/index.js';
@@ -84,15 +84,14 @@ gamu/                      ← repo 根 = GitHub Pages 根
 │   ├── menu/              主選單、LobbyScene、遊戲註冊
 │   ├── net/               PeerJS 連線、protocol、host/guest adapter
 │   └── games/             各款遊戲
-│       ├── dummy/         M1 假遊戲（驗證架構）
-│       └── iceclimber/    （M2 起）
+│       └── iceclimber/    Ice Climber 簡化版（M2 起）
 ├── CLAUDE.md              專案約定（給未來 Claude session 讀）
 └── README.md
 ```
 
 ## 🗺️ 里程碑
 
-- [x] **M1** 引擎骨架 + 選單 + Dummy Bouncer 假遊戲
+- [x] **M1** 引擎骨架 + 選單（Dummy 範例已於 M5 移除）
 - [x] **M2** Ice Climber 單人 MVP（程式生關卡、爬到第 8 層）
 - [x] **M2.5** Ice Climber 畫面與手感優化
 - [x] **M3** 觸控覆蓋層 + 手機橫豎屏

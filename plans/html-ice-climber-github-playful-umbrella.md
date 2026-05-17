@@ -1,7 +1,7 @@
 # Ice Climber 風格網頁遊戲（可擴充遊戲平台）
 
-> **狀態（最後更新時間：M4 基礎重連接入，待真機 WebRTC 驗收）**
-> - ✅ M1 引擎骨架 + 選單 + Dummy 遊戲（commit `1e083fd`）
+> **狀態（最後更新時間：M5 Ice Climber 內容擴充完成，剩記憶體檢查 + LICENSES 整理 + 可選第二款遊戲；M4 仍待跨裝置驗收）**
+> - ✅ M1 引擎骨架 + 選單（Dummy Bouncer 範例已於 M5 移除）
 > - ✅ M2 Ice Climber 單人 MVP（commits `7bd2372`, `8f106d7`, `f60db43`，分支 `m2-iceclimber`）
 >   - 完成項目：Random/AssetLoader/PixelFont、IceGrid、Player 物理（軸分離 sweep、變動跳、槌擊）、Camera deadzone、LevelGen、HUD、勝負流程
 > - ✅ M2.5 Ice Climber 畫面與手感優化
@@ -11,11 +11,20 @@
 >   - `engine/TouchOverlay.js`：DOM 虛擬按鈕、多點 pointer capture、`?touch=1` debug flag、失焦釋放按鍵
 >   - `styles.css` + `Canvas.js`：橫屏浮動控制、豎屏底部控制帶、iOS safe-area、canvas 預留控制區
 > - 🟡 M4 雙人連線（PeerJS）— **host/join、guest interpolation、基礎重連已接入，待跨裝置驗收**
-> - 🟡 M5 收尾 + 音效 + 第二款遊戲
->   - ✅ `engine/Audio.js`：WebAudio 包裝；`scene_ctx.audio` 已接入；首次 keydown/pointerdown 自動 init
->   - ⬜ CC0 音效素材整合（Kenney Impact/Interface）
->   - ⬜ 第二款遊戲（架構驗證）
->   - ⬜ 記憶體洩漏檢查、LICENSES 整理
+> - 🟡 M5 收尾 + 音效 + Ice Climber 內容擴充
+>   - ✅ `engine/Audio.js`（WebAudio 包裝、user gesture init、pending-buffer decode）+ `scene_ctx.audio`
+>   - ✅ Kenney Impact/Interface SFX：`src/games/iceclimber/assets/sfx/{jump,hammer,break,win,lose}.ogg`
+>   - ✅ Hammer 改成「單格 1 damage」，候選優先序：前方體高 → 前方頭頂 → 正上方（要 2 揮才破）
+>   - ✅ LevelGen 收緊 gap 密度（一般列 1..2、floor 線 1..2）
+>   - ✅ Topi 紅鴨敵人（`Topi.js`，走平台/邊緣轉身、撞玩家推飛、hammer 秒殺 +200）
+>   - ✅ Icicle 冰柱（`Icicle.js`，hanging → shaking → falling → dead，撞玩家死、撞 solid 碎、hammer 預先打碎 +50）
+>   - ✅ Nitpicker 鳥（`Nitpicker.js`，定時 spawn、不受 grid 影響、撞玩家推飛、hammer +500、墜落動畫）
+>   - ✅ Bonus 蔬菜獎勵關卡（過 floor 8 自動進入；`stage_mode='bonus'`、固定 4 平台、10 蔬菜、20s 倒數，每個 +300、全收完 +500）
+>   - ✅ Hud 支援 `bonus_timer` 顯示 + `BONUS CLEAR` overlay
+>   - ✅ 移除 Dummy Bouncer，主選單只剩 Ice Climber
+>   - ⬜ 記憶體洩漏檢查（反覆 MainMenu ↔ IceClimber 切換 100+ 次，Scene.destroy() 補 listener 清除）
+>   - ⬜ LICENSES.md 最終整理 + README 補正式 GH Pages URL
+>   - ⬜（可選）第二款遊戲（Snake/Pong / Memory Match 之一，驗證可擴充架構）
 
 ---
 
@@ -33,9 +42,13 @@
    python -m http.server 8000
    # 瀏覽器開 http://localhost:8000/
    ```
-   應該要看到 Gamu 選單、Dummy Bouncer 與 Ice Climber。
+   應該要看到 Gamu 選單（只剩 Ice Climber）。進去能爬塔、敲冰（2 揮一格）、遇到紅鴨/冰柱/鳥、過 floor 8 後切到獎勵蔬菜關。
 
-3. 跟 Claude Code 說「**接續 M4 真機驗收與網路打磨，依照 plans/html-ice-climber-github-playful-umbrella.md**」即可。
+3. 接續工作可以挑：
+   - **M5 收尾**：跟 Claude Code 說「**做 M5 記憶體洩漏檢查 + LICENSES 整理，依 plans/html-ice-climber-github-playful-umbrella.md**」
+   - **M5 第二款遊戲**：「**新增 Snake（或 Pong）作為 M5 第二款遊戲，驗證 GameRegistry 擴充**」
+   - **M4 真機驗收**：「**做 M4 真機驗收與網路打磨，依 plans**」
+   - 任何 Ice Climber 手感/平衡再調。
 
 ---
 
@@ -57,7 +70,7 @@
 |---|---|
 | 連線方式 | **PeerJS / WebRTC P2P**（用 PeerJS 公共 signaling，房間代碼配對） |
 | 玩家模式 | 線上雙人合作 + 單人 |
-| Ice Climber 範圍 | **簡化版 MVP**：主角、槌子、可敲冰塊、爬到第 8 層獲勝。**不做敵人、不做獎勵關**。 |
+| Ice Climber 範圍 | **MVP + M5 擴充**：主角、槌子、可敲冰塊（單格 1 damage、2 揮破）、爬到第 8 層獲勝。**M5 已加敵人（Topi/冰柱/Nitpicker）與獎勵蔬菜關卡**（不再是 MVP-only） |
 | 美術 | **CC0 像素素材**（主用 Kenney.nl 的 Pixel Platformer + Background Elements） |
 | 技術選型 | **Vanilla JS + 原生 ES Modules**（無 build step、無 TypeScript） |
 | 部署 | GitHub Pages，從 `main` 分支 **`/ (root)`**（之前計畫的 `/docs` 已重構掉） |
@@ -66,31 +79,53 @@
 
 ---
 
-## 目前的專案結構（M1 完成後）
+## 目前的專案結構（M5 內容擴充後）
 
 ```
 gamu/                              ← repo 根 = GitHub Pages 根
-├── index.html                     <canvas id="game"> + 觸控覆蓋層容器
+├── index.html                     <canvas id="game"> + 觸控覆蓋層；先載 peerjs.min.js
 ├── 404.html                       複製自 index.html
-├── styles.css                     橫豎屏 body class、letterbox
+├── styles.css                     橫豎屏 body class、letterbox、觸控按鈕
 ├── src/
-│   ├── main.js                    啟動、scene 切換、registerGame、暴露 ctx
+│   ├── main.js                    啟動、scene 切換、registerGame、ctx（含 audio）
 │   ├── engine/
 │   │   ├── GameLoop.js            固定步長 60Hz update + 變動 render
 │   │   ├── Canvas.js              邏輯解析度 256×240，整數縮放；手機豎屏保留觸控控制區
 │   │   ├── Input.js               InputManager + Btn 列舉；鍵盤映射
 │   │   ├── TouchOverlay.js        DOM 觸控覆蓋層（M3）
+│   │   ├── Random.js              mulberry32 seeded PRNG
+│   │   ├── AssetLoader.js         圖片/JSON 預載
+│   │   ├── PixelFont.js           5×7 bitmap 字型（drawText）
+│   │   ├── SpriteSheet.js         tilesheet frame 切取
+│   │   ├── Audio.js               WebAudio 包裝；user gesture init + pending decode（M5）
 │   │   └── Scene.js               Scene 基底類別
 │   ├── menu/
 │   │   ├── GameRegistry.js        registerGame / listGames / getGame
-│   │   └── MainMenu.js            含內嵌 5×7 像素字型，無素材依賴
-│   └── games/dummy/
+│   │   ├── MainMenu.js            遊戲卡片選單（SINGLE / HOST / JOIN）
+│   │   └── LobbyScene.js          M4 雙人配對大廳
+│   ├── net/                       M4 連線層
+│   │   ├── NetProtocol.js         房號、input bitfield、message type
+│   │   ├── PeerSession.js         PeerJS host/join/重連包裝
+│   │   └── NetAdapters.js         Host/Guest NetAdapter（snapshot 同步）
+│   └── games/iceclimber/
 │       ├── index.js               GameModule 宣告
-│       └── DummyScene.js          彈跳球，驗證 Scene 介面
-├── plans/
-│   └── html-ice-climber-github-playful-umbrella.md   ← 本檔
-├── note/
-│   └── note.md                    最早的需求備忘
+│       ├── IceClimberScene.js     主場景；含 stage_mode='climb'|'bonus' 狀態機
+│       ├── Player.js              玩家物理 + 槌擊（target = 前方體高/前方頭頂/正上方）
+│       ├── IceGrid.js             8 欄無限行；hits=2 才破
+│       ├── Camera.js              Y 軸 deadzone、永不下捲
+│       ├── LevelGen.js            8 層 procedural（一般列 1..2 gap、floor 線 1..2 gap）
+│       ├── Topi.js                M5 紅鴨敵人
+│       ├── Icicle.js              M5 冰柱
+│       ├── Nitpicker.js           M5 鳥
+│       ├── HammerHitbox.js        舊版判定盒（M5 起 Player 與 Art 都已不再使用，保留檔案）
+│       ├── IceClimberArt.js       程式化 pixel art（含 topi/icicle/nitpicker/vegetable）
+│       ├── Hud.js                 含 bonus_timer + BONUS CLEAR overlay
+│       └── assets/
+│           ├── sfx/{jump,hammer,break,win,lose}.ogg   M5 Kenney SFX
+│           └── LICENSES.md                            CC0 來源 + sfx 對應
+├── vendor/peerjs.min.js           固化的 PeerJS
+├── plans/html-ice-climber-github-playful-umbrella.md ← 本檔
+├── note/note.md                   最早的需求備忘
 ├── CLAUDE.md                      專案約定（給未來 Claude session）
 ├── README.md                      使用方式（給人類）
 └── .gitignore
@@ -532,61 +567,61 @@ PeerJS 會掛在 `window.Peer`。
 
 ---
 
-# 🎯 M5 — 收尾 + 音效 + 第二款遊戲示範
+# 🎯 M5 — 收尾 + 音效 + Ice Climber 內容擴充
 
 ## 目標
-- 整個系統打磨完
-- 證明「擴充其他遊戲」確實可行
+- Ice Climber 玩起來像原作（有敵人、冰柱、鳥、獎勵蔬菜關）
+- 系統打磨：音效、記憶體、LICENSES
+- 證明「擴充其他遊戲」可行（可選第二款）
 
-## 任務
+## 完成的部分（接手者必讀）
 
-### 1. 音效系統
-- `engine/Audio.js` — WebAudio 包裝
-  ```js
-  class AudioSystem {
-    constructor() { this.ctx = null; this.buffers = {}; }
-    async init() {
-      // 首次 user gesture 時呼叫
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    async load(name, url) { ... }
-    play(name, { volume = 1, loop = false } = {}) { ... }
-    stop(name) { ... }
-  }
-  ```
-- 在 `main.js` 首次 keydown/click 時 `audio.init()`（iOS Safari 需求）
+### 槌擊與關卡
+- `Player._doHammerHit`：候選優先序「前方體高 → 前方頭頂 → 正上方」，找到第一個 ICE 就敲，**1 cell × 1 damage**（需 2 揮才破）
+  - 暴露 `player.hammerJustLanded` / `hammerTargetCol` / `hammerTargetRow` 供場景做 Topi/Icicle/Nitpicker 撃殺判定
+- `LevelGen`：一般列與 floor 線都收緊到 1..2 個 gap，避免「敲一下整片消失」的失控
 
-### 2. CC0 音效
-從 Kenney audio packs：
-- **Impact Sounds** — 槌擊、破冰音
-- **Interface Sounds** — 跳躍、過關音
-- 不需要背景音樂（先省略）
+### 敵人 / 危險
+- `Topi.js`（紅鴨）：14×8，沿 floor-line 走、撞牆/邊緣轉身；撞玩家 `vx=facing*100 + 抬起`；hammer 同 cell 秒殺 +200。`spawnTopis` 每 floor-line 約 65% 機率出 1 隻
+- `Icicle.js`（冰柱）：4×8，狀態機 `HANGING→SHAKING→FALLING→DEAD`；玩家在欄內且垂直 10 cell 內觸發；撞玩家 → `gameState='lost'`；hammer 預先打碎 +50。`spawnIcicles` 對「solid + 下方 empty」候選 10% 機率
+- `Nitpicker.js`（鳥）：12×8，不受 grid 影響；玩家過 floor 2 後每 5–9s 從邊緣 spawn 1 隻（最多 2 隻）；撞玩家推 +80 vx；hammer +500、墜落 1.5s 後 despawn
 
-放在 `src/games/iceclimber/assets/sfx/`，加入 `LICENSES.md`。
+### 獎勵關卡
+- `IceClimberScene.stage_mode = 'climb' | 'bonus'`
+- climb 過 floor 8（gameState='won'）→ END_DELAY 後自動 `_enterBonusStage()`
+- bonus 用固定 grid：4 個 SOLID 平台（cols 0–3 / 4–7 / 0–3 / 4–7），10 個蔬菜（5 種：eggplant/carrot/cabbage/fish/corn），20s 倒數
+- 每個蔬菜 +300，全收完額外 +500
+- 時間到或全收完 → `gameState='bonus_done'` → 按 START 回選單
 
-### 3. 第二款遊戲（架構驗證）
-做個極簡的遊戲，例如：
-- **Snake**（貪食蛇）— 8×8 格、吃蘋果、撞牆死
-- **Pong vs CPU** — 玩家上下移動板子、撞球比分
-- **Memory Match** — 翻牌配對
+### Audio
+- `engine/Audio.js` 在第一次 `keydown` 或 `pointerdown` 自動 init；load 時若還沒 init 會先 fetch 並暫存 ArrayBuffer、init 後才 decode
+- 音效：jump（pluck）、hammer（impactPunch）、break（impactGlass）、win（confirmation）、lose（error_004），全部來自 Kenney CC0
+- IceClimberScene `_emitStateSfx` 透過 `prev_state` 邊緣偵測觸發 jump/hammer/win/lose
 
-選一個 30 分鐘能寫完的。重點是**不改 engine、不改 main.js 引擎邏輯**，只新增 `src/games/<id>/` 資料夾 + 加一行 `registerGame()`。
+### Snapshot 擴充（M4 多人）
+`serializeSnapshot` 已包含：players、grid、camera_y、score、floor、maxFloor、gameState、endTimer、elapsed、**topis、icicles、nitpickers、bird_spawn_timer、stage_mode、bonus_timer、vegetables**
 
-### 4. README / LICENSES 整理
-- 填入正式的 GitHub Pages URL
-- 整理每個遊戲的 `LICENSES.md`
-- 程式碼授權選擇（建議 MIT）
+## 還沒做（下個 session 可挑）
 
-### 5. 記憶體洩漏檢查
-- 在 DevTools 開 Performance Memory profiler
-- 反覆切換 選單 → A → 選單 → B → 選單 → A 多次
-- `getEventListeners(window)` 確認沒殘留
-- Scene 的 `destroy()` 要把所有 `addEventListener` 對應移除
+### 1. 記憶體洩漏檢查
+- DevTools Performance Memory profiler
+- 反覆切 MainMenu → IceClimber → 回選單 100+ 次
+- `Scene.destroy()` 目前是空的，IceClimberScene 沒有額外 listener（已用引擎包好），但要確認 Audio 不會累積 source、Canvas/TouchOverlay listener 不會殘留
+- `getEventListeners(window)` 在 DevTools console 抓殘留
 
-## 驗收
-- 兩款遊戲都能從選單進、回得來、可重複切換
-- 跳躍、破冰、過關音效在桌機 + iOS Safari 都能播放
-- 反覆切換無明顯記憶體成長
+### 2. LICENSES / README 收尾
+- `src/games/iceclimber/assets/LICENSES.md` 已記 pixel art 與 sfx，但未統一格式
+- README 補正式 GH Pages URL
+- 程式碼授權（建議 MIT），repo 根放 `LICENSE`
+
+### 3.（可選）第二款遊戲
+- Snake / Pong / Memory Match 任選；30 分鐘工程量
+- 重點：不改 engine、不改 main.js 引擎邏輯，只新增 `src/games/<id>/` + 一行 `registerGame()`
+
+## 驗收（最後）
+- ✅ 跳躍、破冰、過關音效在桌機可播放（iOS Safari 待真機）
+- ⬜ 反覆切換無明顯記憶體成長
+- ⬜（若做第二款）兩款遊戲都能從選單進、回得來、可重複切換
 
 ---
 
