@@ -1,6 +1,5 @@
 import { Btn } from '../../engine/Input.js';
 import { CELL_W, CELL_H, PLAYFIELD_W, TYPE } from './IceGrid.js';
-import { hammerHitbox } from './HammerHitbox.js';
 
 export const PLAYER_W = 12;
 export const PLAYER_H = 14;
@@ -61,6 +60,7 @@ export class Player {
    */
   update(dt, input, grid) {
     this.brokeCells.length = 0;
+    this.hammerJustLanded = false;
 
     const is_hammering = this.state === 'hammer';
 
@@ -286,26 +286,28 @@ export class Player {
   }
 
   /**
-   * 依槌擊 hitbox 破壞前方冰塊。
+   * 槌擊：只打玩家身體中央高度、面向前方那一格。1 damage，
+   * 因此一片 ICE 仍需要 2 次槌擊（或 head-bonk 兩次）才會碎。
+   * 這避免「揮一次清掉一整列上下兩排」的失控情況。
    *
    * @param {IceGrid} grid - 可破壞的冰磚網格。
    * @returns {void}
-   * @depends hammerHitbox, IceGrid.hit
+   * @depends IceGrid.cellAt, IceGrid.hit, CELL_W, CELL_H
    */
   _doHammerHit(grid) {
-    const box = hammerHitbox(this);
-    const first_col = Math.floor(box.x / CELL_W);
-    const last_col = Math.floor((box.x + box.w - EPS) / CELL_W);
-    const first_row = Math.ceil(-(box.y + box.h - EPS) / CELL_H);
-    const last_row = Math.ceil(-box.y / CELL_H);
-    for (let row_index = first_row; row_index <= last_row; row_index++) {
-      for (let col_index = first_col; col_index <= last_col; col_index++) {
-        const cell = grid.cellAt(col_index, row_index);
-        if (cell && cell.type === TYPE.ICE) {
-          const broke = grid.hit(col_index, row_index, 2);
-          if (broke) this.brokeCells.push({ col: col_index, row: row_index, by: 'hammer' });
-        }
-      }
+    const center_y = this.y + PLAYER_H / 2;
+    const target_row = Math.ceil(-center_y / CELL_H);
+    const target_col = this.facing > 0
+      ? Math.floor((this.x + PLAYER_W) / CELL_W)
+      : Math.floor((this.x - 1) / CELL_W);
+    const cell = grid.cellAt(target_col, target_row);
+    if (cell && cell.type === TYPE.ICE) {
+      const broke = grid.hit(target_col, target_row, 1);
+      if (broke) this.brokeCells.push({ col: target_col, row: target_row, by: 'hammer' });
     }
+    // 暴露槌擊目標格供場景做 Topi/Icicle 撃殺判定，避免重算 hitbox。
+    this.hammerTargetCol = target_col;
+    this.hammerTargetRow = target_row;
+    this.hammerJustLanded = true;
   }
 }

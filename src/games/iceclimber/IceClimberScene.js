@@ -10,6 +10,8 @@ import { Camera } from './Camera.js';
 import { generateLevel, GOAL_ROW, FLOOR_ROWS } from './LevelGen.js';
 import { IceClimberArt } from './IceClimberArt.js';
 import { renderHud } from './Hud.js';
+import { Topi, spawnTopis } from './Topi.js';
+import { Icicle, spawnIcicles, ICICLE_STATE } from './Icicle.js';
 
 export const PLAYFIELD_OFFSET_X = (256 - PLAYFIELD_W) / 2;
 const VIEW_H = 240;
@@ -84,6 +86,8 @@ export class IceClimberScene extends Scene {
     this.endTimer = 0;
     this.elapsed = 0;
     this.break_effects = [];
+    this.topis = spawnTopis(this.rng, this.grid);
+    this.icicles = spawnIcicles(this.rng, this.grid);
     this.net_disconnected = false;
     this.net_disconnect_timer = 0;
     this.snapshot_buffer = [];
@@ -128,6 +132,17 @@ export class IceClimberScene extends Scene {
       players.forEach((player, player_index) => {
         player.update(dt, player_inputs[player_index], this.grid);
       });
+      this._updateTopis(dt);
+      this._updateIcicles(dt, players);
+      this._resolveTopiPlayerCollisions(players);
+      this._resolveTopiHammerKills(players);
+      this._resolveIcicleHammerHits(players);
+      const icicle_killed_player = this._checkIcicleKillsPlayer(players);
+      if (icicle_killed_player) {
+        this.gameState = 'lost';
+        this.endTimer = 0;
+      }
+
       const highest_player_y = Math.min(...players.map((player) => player.y));
       this.camera.follow(highest_player_y);
 
@@ -195,6 +210,12 @@ export class IceClimberScene extends Scene {
     this.art.draw_side_walls(canvas_context, PLAYFIELD_OFFSET_X);
     this._drawGrid(canvas_context, camera_y);
     this.art.draw_goal_line(canvas_context, PLAYFIELD_OFFSET_X, camera_y);
+    for (const topi of this.topis) {
+      this.art.draw_topi(canvas_context, topi, PLAYFIELD_OFFSET_X, camera_y, elapsed);
+    }
+    for (const icicle of this.icicles) {
+      this.art.draw_icicle(canvas_context, icicle, PLAYFIELD_OFFSET_X, camera_y, elapsed);
+    }
     this.art.draw_break_effects(canvas_context, this.break_effects, PLAYFIELD_OFFSET_X, camera_y);
     players.forEach((player) => this._drawPlayer(canvas_context, player, camera_y, elapsed));
     renderHud(canvas_context, { score: this.score, floor: this.maxFloor, state: this.gameState });
@@ -219,6 +240,8 @@ export class IceClimberScene extends Scene {
       gameState: this.gameState,
       endTimer: this.endTimer,
       elapsed: this.elapsed,
+      topis: this.topis.map((topi) => topi.serialize()),
+      icicles: this.icicles.map((icicle) => icicle.serialize()),
     };
   }
 
@@ -245,6 +268,17 @@ export class IceClimberScene extends Scene {
     this.gameState = snapshot.gameState;
     this.endTimer = snapshot.endTimer;
     this.elapsed = snapshot.elapsed;
+
+    if (Array.isArray(snapshot.topis)) {
+      while (this.topis.length < snapshot.topis.length) this.topis.push(new Topi());
+      this.topis.length = snapshot.topis.length;
+      for (let i = 0; i < snapshot.topis.length; i++) this.topis[i].applySnapshot(snapshot.topis[i]);
+    }
+    if (Array.isArray(snapshot.icicles)) {
+      while (this.icicles.length < snapshot.icicles.length) this.icicles.push(new Icicle());
+      this.icicles.length = snapshot.icicles.length;
+      for (let i = 0; i < snapshot.icicles.length; i++) this.icicles[i].applySnapshot(snapshot.icicles[i]);
+    }
   }
 
   /**
@@ -593,6 +627,120 @@ export class IceClimberScene extends Scene {
         });
       }
     }
+  }
+
+  /**
+   * 推進所有 Topi 的物理；死掉的 Topi 留在陣列以維持 snapshot index 對齊，下回合 reset 才清空。
+   *
+   * @param {number} dt - 固定步長秒數。
+   * @returns {void}
+   * @depends Topi.update
+   */
+  _updateTopis(dt) {
+    for (const topi of this.topis) topi.update(dt, this.grid);
+  }
+
+  /**
+   * Topi 撞玩家：以 Topi.facing 方向把玩家橫向推飛、加一點 lift，玩家可能因此被推下平台。
+   *
+   * @param {Player[]} players - 本 tick 的玩家陣列。
+   * @returns {void}
+   * @depends Topi.alive
+   */
+  _resolveTopiPlayerCollisions(players) {
+    for (const player of players) {
+      for (const topi of this.topis) {
+        if (!topi.alive) continue;
+        if (player.rightX <= topi.leftX || player.leftX >= topi.rightX) continue;
+        if (player.feetY <= topi.y || player.y >= topi.feetY) continue;
+        const push_dir = topi.facing;
+        player.vx = push_dir * 100;
+        if (player.onGround) player.vy = -130;
+      }
+    }
+  }
+
+  /**
+   * 槌擊剛落下的那一 tick，檢查 Topi 是否在 hammerTarget cell 範圍內，是則 kill。
+   *
+   * @param {Player[]} players - 本 tick 的玩家陣列。
+   * @returns {void}
+   * @depends Player.hammerJustLanded, Topi.kill
+   */
+  _resolveTopiHammerKills(players) {
+    for (const player of players) {
+      if (!player.hammerJustLanded) continue;
+      const col = player.hammerTargetCol;
+      const row = player.hammerTargetRow;
+      if (col == null || row == null) continue;
+      const cell_left = col * CELL_W;
+      const cell_right = cell_left + CELL_W;
+      const cell_top = -row * CELL_H;
+      const cell_bottom = cell_top + CELL_H;
+      for (const topi of this.topis) {
+        if (!topi.alive) continue;
+        if (topi.rightX <= cell_left || topi.leftX >= cell_right) continue;
+        if (topi.feetY <= cell_top || topi.y >= cell_bottom) continue;
+        topi.kill();
+        this.score += 200;
+        this._playSfx('break', { volume: 0.7 });
+      }
+    }
+  }
+
+  /**
+   * 推進所有冰柱狀態機；hanging 在玩家走到下方時觸發 shaking。
+   *
+   * @param {number} dt - 固定步長秒數。
+   * @param {Player[]} players - 觸發抖動的玩家清單。
+   * @returns {void}
+   * @depends Icicle.update
+   */
+  _updateIcicles(dt, players) {
+    for (const icicle of this.icicles) icicle.update(dt, this.grid, players);
+  }
+
+  /**
+   * 槌擊剛落下且 hammer target cell 內有 hanging/shaking 冰柱 → 提早粉碎。
+   *
+   * @param {Player[]} players - 本 tick 的玩家陣列。
+   * @returns {void}
+   * @depends Icicle.shatter
+   */
+  _resolveIcicleHammerHits(players) {
+    for (const player of players) {
+      if (!player.hammerJustLanded) continue;
+      const col = player.hammerTargetCol;
+      const row = player.hammerTargetRow;
+      if (col == null || row == null) continue;
+      for (const icicle of this.icicles) {
+        if (icicle.state !== ICICLE_STATE.HANGING && icicle.state !== ICICLE_STATE.SHAKING) continue;
+        if (icicle.col !== col) continue;
+        // 掛在 row=parent 的冰柱實際視覺位置在 row=parent-1，因此 hammer target row 必須 == parent-1
+        if (icicle.row - 1 !== row) continue;
+        icicle.shatter();
+        this.score += 50;
+        this._playSfx('break', { volume: 0.55 });
+      }
+    }
+  }
+
+  /**
+   * 落下中的冰柱撞到任一玩家 → 回傳該玩家，否則 null。讓上層決定結束遊戲。
+   *
+   * @param {Player[]} players - 本 tick 的玩家陣列。
+   * @returns {Player|null}
+   */
+  _checkIcicleKillsPlayer(players) {
+    for (const icicle of this.icicles) {
+      if (icicle.state !== ICICLE_STATE.FALLING) continue;
+      for (const player of players) {
+        if (player.rightX <= icicle.leftX || player.leftX >= icicle.rightX) continue;
+        if (player.feetY <= icicle.topY || player.y >= icicle.bottomY) continue;
+        return player;
+      }
+    }
+    return null;
   }
 
   /**

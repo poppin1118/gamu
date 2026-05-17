@@ -1,7 +1,8 @@
 import { CELL_H, CELL_W, PLAYFIELD_W, TYPE } from './IceGrid.js';
 import { FLOOR_ROWS, GOAL_ROW } from './LevelGen.js';
 import { PLAYER_H, PLAYER_W } from './Player.js';
-import { hammerHitbox } from './HammerHitbox.js';
+import { TOPI_W, TOPI_H } from './Topi.js';
+import { ICICLE_W, ICICLE_H, ICICLE_STATE } from './Icicle.js';
 
 const VIEW_W = 256;
 const VIEW_H = 240;
@@ -202,12 +203,82 @@ export class IceClimberArt {
     canvas_context.fillRect(handle_x, screen_y - 6, 2, 10);
     canvas_context.fillStyle = '#d8c08b';
     canvas_context.fillRect(head_x, screen_y - 8, 5, 4);
+  }
 
-    const hitbox = hammerHitbox(player);
-    const hitbox_x = hitbox.x - player.x + screen_x;
-    const hitbox_y = hitbox.y - player.y + screen_y;
-    canvas_context.fillStyle = 'rgba(255, 255, 255, 0.35)';
-    canvas_context.fillRect(hitbox_x, hitbox_y, hitbox.w, hitbox.h);
+  /**
+   * 繪製紅鴨 Topi。
+   *
+   * @param {CanvasRenderingContext2D} canvas_context - 2D canvas context。
+   * @param {Topi} topi - Topi 狀態。
+   * @param {number} offset_x - 遊戲區域左側偏移。
+   * @param {number} camera_y - 目前攝影機 Y 座標。
+   * @param {number} elapsed - 用於走路上下彈跳動畫。
+   * @returns {void}
+   * @depends TOPI_W, TOPI_H
+   */
+  draw_topi(canvas_context, topi, offset_x, camera_y, elapsed) {
+    if (!topi.alive) return;
+    const bob = Math.floor(elapsed * 8) % 2 === 0 ? 0 : 1;
+    const sx = Math.floor(topi.x + offset_x);
+    const sy = Math.floor(topi.y - camera_y) + bob;
+
+    canvas_context.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    canvas_context.fillRect(sx + 1, sy + TOPI_H, TOPI_W - 2, 1);
+
+    canvas_context.fillStyle = '#9c2035';
+    canvas_context.fillRect(sx + 1, sy + 2, TOPI_W - 2, TOPI_H - 3);
+    canvas_context.fillStyle = '#d8485f';
+    canvas_context.fillRect(sx + 2, sy + 1, TOPI_W - 4, TOPI_H - 2);
+
+    canvas_context.fillStyle = '#ffe8d8';
+    canvas_context.fillRect(sx + 4, sy + 4, TOPI_W - 8, TOPI_H - 5);
+
+    canvas_context.fillStyle = '#ffd75a';
+    const beak_x = topi.facing > 0 ? sx + TOPI_W - 1 : sx - 1;
+    canvas_context.fillRect(beak_x, sy + 3, 2, 2);
+
+    canvas_context.fillStyle = '#10172f';
+    const eye_x = topi.facing > 0 ? sx + TOPI_W - 4 : sx + 2;
+    canvas_context.fillRect(eye_x, sy + 2, 1, 1);
+
+    canvas_context.fillStyle = '#c9871a';
+    canvas_context.fillRect(sx + 3, sy + TOPI_H - 1, 2, 1);
+    canvas_context.fillRect(sx + TOPI_W - 5, sy + TOPI_H - 1, 2, 1);
+  }
+
+  /**
+   * 繪製冰柱：hanging 穩定、shaking 左右抖動、falling 朝下移動。
+   *
+   * @param {CanvasRenderingContext2D} canvas_context - 2D canvas context。
+   * @param {Icicle} icicle - icicle 狀態。
+   * @param {number} offset_x - 遊戲區域左側偏移。
+   * @param {number} camera_y - 目前攝影機 Y 座標。
+   * @param {number} elapsed - 抖動取樣用。
+   * @returns {void}
+   * @depends ICICLE_W, ICICLE_H, ICICLE_STATE
+   */
+  draw_icicle(canvas_context, icicle, offset_x, camera_y, elapsed) {
+    if (icicle.state === ICICLE_STATE.DEAD) return;
+    const shake_dx = icicle.state === ICICLE_STATE.SHAKING
+      ? (Math.floor(elapsed * 40) % 2 === 0 ? -1 : 1)
+      : 0;
+    const sx = Math.floor(icicle.x + offset_x) + shake_dx;
+    const sy = Math.floor(icicle.y - camera_y);
+
+    canvas_context.fillStyle = '#a8d8ff';
+    canvas_context.fillRect(sx, sy, ICICLE_W, ICICLE_H - 3);
+    canvas_context.fillStyle = '#7cb6e0';
+    canvas_context.fillRect(sx, sy + 1, 1, ICICLE_H - 4);
+    canvas_context.fillRect(sx + ICICLE_W - 1, sy + 1, 1, ICICLE_H - 4);
+
+    // 尖端逐漸收窄
+    canvas_context.fillStyle = '#a8d8ff';
+    canvas_context.fillRect(sx + 1, sy + ICICLE_H - 3, ICICLE_W - 2, 1);
+    canvas_context.fillRect(sx + 1, sy + ICICLE_H - 2, 1, 1);
+    canvas_context.fillRect(sx + ICICLE_W - 2, sy + ICICLE_H - 2, 1, 1);
+
+    canvas_context.fillStyle = '#ffffff';
+    canvas_context.fillRect(sx + 1, sy + 1, 1, 2);
   }
 
   /**

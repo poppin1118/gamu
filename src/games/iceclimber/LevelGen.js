@@ -54,9 +54,11 @@ export function generateRow(row_index, rng, prev_row, prev_prev_row) {
     return new Array(GRID_W).fill(TYPE.SOLID);
   }
 
+  // hammer 改成單格 1 damage 後，每格要 2 揮才破，太多 gap 反而會讓玩家無平台可立足；
+  // 收緊到「每列 1..2 gap、floor 線 1..2 gap」貼近原作的密度感。
   const is_floor_line = row_index % FLOOR_ROWS === 0;
   const min_gaps = 1;
-  const max_gaps = is_floor_line ? 2 : 4;
+  const max_gaps = is_floor_line ? 2 : 2;
   const num_gaps = min_gaps + Math.floor(rng.next() * (max_gaps - min_gaps + 1));
 
   const cols = [];
