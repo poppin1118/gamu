@@ -15,6 +15,8 @@
 | 開始/暫停  | `Enter`   | START    | Start  |
 | 退出至選單 | `Enter`   | START    | Start  |
 
+觸控按鈕會在手機/平板自動顯示；桌機可加 `?touch=1` 強制測試，或用 `?touch=0` 強制關閉。
+
 ## 👥 兩人連線玩法（M4 完成後）
 
 1. **主機端**：選單 → 選擇遊戲 → **建立房間** → 看到 6 字代碼（例 `gamu-A7K9QX`）
@@ -74,7 +76,7 @@ gamu/                      ← repo 根 = GitHub Pages 根
 ├── 404.html
 ├── src/
 │   ├── main.js            啟動、註冊遊戲
-│   ├── engine/            共用引擎（GameLoop、Canvas、Input、Scene）
+│   ├── engine/            共用引擎（GameLoop、Canvas、Input、TouchOverlay、Scene）
 │   ├── menu/              主選單、遊戲註冊
 │   ├── net/               （M4 才加入）PeerJS 連線
 │   └── games/             各款遊戲
@@ -87,8 +89,9 @@ gamu/                      ← repo 根 = GitHub Pages 根
 ## 🗺️ 里程碑
 
 - [x] **M1** 引擎骨架 + 選單 + Dummy Bouncer 假遊戲
-- [ ] **M2** Ice Climber 單人 MVP（程式生關卡、爬到第 8 層）
-- [ ] **M3** 觸控覆蓋層 + 手機橫豎屏
+- [x] **M2** Ice Climber 單人 MVP（程式生關卡、爬到第 8 層）
+- [x] **M2.5** Ice Climber 畫面與手感優化
+- [x] **M3** 觸控覆蓋層 + 手機橫豎屏
 - [ ] **M4** 雙人連線（PeerJS WebRTC P2P）
 - [ ] **M5** 收尾 + 音效 + 第二款遊戲示範
 

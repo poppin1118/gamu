@@ -1,65 +1,47 @@
 import { Scene } from '../../engine/Scene.js';
 import { Btn } from '../../engine/Input.js';
 import { makeRng } from '../../engine/Random.js';
-import { loadAssets } from '../../engine/AssetLoader.js';
-import { SpriteSheet } from '../../engine/SpriteSheet.js';
 import {
   IceGrid, GRID_W, CELL_W, CELL_H, PLAYFIELD_W, TYPE,
 } from './IceGrid.js';
 import { Player, PLAYER_W, PLAYER_H } from './Player.js';
 import { Camera } from './Camera.js';
-import { hammerHitbox } from './HammerHitbox.js';
-import { generateLevel, GOAL_ROW, FLOOR_ROWS, TOTAL_FLOORS } from './LevelGen.js';
+import { generateLevel, GOAL_ROW, FLOOR_ROWS } from './LevelGen.js';
+import { IceClimberArt } from './IceClimberArt.js';
 import { renderHud } from './Hud.js';
 
 export const PLAYFIELD_OFFSET_X = (256 - PLAYFIELD_W) / 2;
 const VIEW_H = 240;
-const VIEW_W = 256;
 
 const END_DELAY = 1.0;
-
-const MANIFEST = {
-  images: {
-    tiles: './src/games/iceclimber/assets/Tilemap/tilemap_packed.png',
-    chars: './src/games/iceclimber/assets/Tilemap/tilemap-characters_packed.png',
-    backgrounds: './src/games/iceclimber/assets/Tilemap/tilemap-backgrounds_packed.png',
-  },
-  json: {},
-};
-
-const FRAME = {
-  ICE: 95,
-  SOLID: 40,
-  GOAL: 40,
-  P_IDLE: 13,
-  P_RUN_A: 13,
-  P_RUN_B: 14,
-  P_JUMP: 15,
-  P_FALL: 16,
-  P_HAMMER: 17,
-  BG_SKY: 0,
-};
-
-const RUN_ANIM_HZ = 8;
+const PARTICLE_LIFE = 0.28;
 
 export class IceClimberScene extends Scene {
+  /**
+   * 初始化 Ice Climber 單人場景與 deterministic 關卡。
+   *
+   * @param {object} ctx - Scene context，包含 canvas、input 與切換場景 callback。
+   * @returns {Promise<void>} 初始化完成後 resolve。
+   * @depends makeRng, IceGrid, Player, Camera, IceClimberArt
+   */
   async init(ctx) {
     this.ctx = ctx;
-    this.seed = (Math.random() * 0xffffffff) >>> 0;
+    this.seed = Date.now() >>> 0;
     this.rng = makeRng(this.seed);
     this.grid = new IceGrid();
+    this.art = new IceClimberArt();
 
     const rows = generateLevel(this.rng);
-    rows.forEach((types, r) => this.grid.setRow(r, types));
+    rows.forEach((types, row_index) => this.grid.setRow(row_index, types));
 
-    const spawnCol = Math.floor(GRID_W / 2);
-    for (let c = spawnCol - 1; c <= spawnCol + 1; c++) {
-      const cell = this.grid.cellAt(c, 1);
+    const spawn_col = Math.floor(GRID_W / 2);
+    for (let col_index = spawn_col - 1; col_index <= spawn_col + 1; col_index++) {
+      const cell = this.grid.cellAt(col_index, 1);
       if (cell) { cell.type = TYPE.EMPTY; cell.hits = 0; }
     }
 
     this.player = new Player({
-      x: spawnCol * CELL_W + (CELL_W - PLAYER_W) / 2,
+      x: spawn_col * CELL_W + (CELL_W - PLAYER_W) / 2,
       y: -PLAYER_H,
     });
     this.camera = new Camera({ viewH: VIEW_H, deadzoneTop: 140 });
@@ -71,39 +53,37 @@ export class IceClimberScene extends Scene {
     this.gameState = 'playing';
     this.endTimer = 0;
     this.elapsed = 0;
-
-    try {
-      const assets = await loadAssets(MANIFEST);
-      this.sheets = {
-        tiles: new SpriteSheet(assets.images.tiles, { tileSize: 18, spacing: 0, cols: 20 }),
-        chars: new SpriteSheet(assets.images.chars, { tileSize: 24, spacing: 0, cols: 9 }),
-        bg: new SpriteSheet(assets.images.backgrounds, { tileSize: 24, spacing: 0, cols: 8 }),
-      };
-    } catch (err) {
-      console.warn('Ice Climber 素材載入失敗，使用色塊 fallback', err);
-      this.sheets = null;
-    }
+    this.break_effects = [];
   }
 
+  /**
+   * 推進遊戲狀態、玩家、攝影機與破冰粒子。
+   *
+   * @param {number} dt - 固定步長秒數。
+   * @returns {void}
+   * @depends Player.update, Camera.follow, IceGrid
+   */
   update(dt) {
     const input = this.ctx.input;
     this.elapsed += dt;
+    this._updateBreakEffects(dt);
 
     if (this.gameState === 'playing') {
       this.player.update(dt, input, this.grid);
       this.camera.follow(this.player.y);
 
       this.score += this.player.brokeCells.length * 10;
+      this._spawnBreakEffects(this.player.brokeCells);
 
       if (this.player.onGround) {
-        const standingRow = Math.round(-this.player.feetY / CELL_H);
-        const newFloor = Math.max(0, Math.floor(standingRow / FLOOR_ROWS));
-        if (newFloor > this.maxFloor) {
-          this.score += (newFloor - this.maxFloor) * 100;
-          this.maxFloor = newFloor;
+        const standing_row = Math.round(-this.player.feetY / CELL_H);
+        const new_floor = Math.max(0, Math.floor(standing_row / FLOOR_ROWS));
+        if (new_floor > this.maxFloor) {
+          this.score += (new_floor - this.maxFloor) * 100;
+          this.maxFloor = new_floor;
         }
-        this.floor = newFloor;
-        if (standingRow >= GOAL_ROW) {
+        this.floor = new_floor;
+        if (standing_row >= GOAL_ROW) {
           this.gameState = 'won';
           this.endTimer = 0;
         }
@@ -125,133 +105,112 @@ export class IceClimberScene extends Scene {
     }
   }
 
+  /**
+   * 繪製完整遊戲畫面。
+   *
+   * @param {CanvasRenderingContext2D} c - 2D canvas context。
+   * @returns {void}
+   * @depends IceClimberArt, renderHud
+   */
   render(c) {
-    this._drawBackground(c);
-    this._drawSideWalls(c);
+    this.art.draw_background(c, this.camera.y);
+    this.art.draw_side_walls(c, PLAYFIELD_OFFSET_X);
     this._drawGrid(c);
-    this._drawGoalLine(c);
+    this.art.draw_goal_line(c, PLAYFIELD_OFFSET_X, this.camera.y);
+    this.art.draw_break_effects(c, this.break_effects, PLAYFIELD_OFFSET_X, this.camera.y);
     this._drawPlayer(c);
     renderHud(c, { score: this.score, floor: this.maxFloor, state: this.gameState });
   }
 
-  _drawBackground(c) {
-    const g = c.createLinearGradient(0, 0, 0, VIEW_H);
-    g.addColorStop(0, '#0a1428');
-    g.addColorStop(1, '#1c3a5a');
-    c.fillStyle = g;
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
-    c.fillStyle = '#ffffff';
-    for (let i = 0; i < 20; i++) {
-      const x = (i * 53 + ((this.camera.y * 0.05) | 0)) % VIEW_W;
-      const y = (i * 31) % (VIEW_H / 2);
-      c.fillRect(((x + VIEW_W) % VIEW_W) | 0, y | 0, 1, 1);
-    }
-  }
-
-  _drawSideWalls(c) {
-    c.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    c.fillRect(0, 0, PLAYFIELD_OFFSET_X, VIEW_H);
-    c.fillRect(PLAYFIELD_OFFSET_X + PLAYFIELD_W, 0, PLAYFIELD_OFFSET_X, VIEW_H);
-  }
-
+  /**
+   * 只繪製攝影機附近的可見冰磚列。
+   *
+   * @param {CanvasRenderingContext2D} c - 2D canvas context。
+   * @returns {void}
+   * @depends IceGrid, IceClimberArt
+   */
   _drawGrid(c) {
-    const camY = this.camera.y;
-    const minR = Math.floor(-(camY + VIEW_H) / CELL_H) - 1;
-    const maxR = Math.ceil(-camY / CELL_H) + 1;
-    for (let r = minR; r <= maxR; r++) {
-      const cellsRow = this.grid.rows[r];
-      if (!cellsRow) continue;
-      const sy = -r * CELL_H - camY;
-      for (let col = 0; col < GRID_W; col++) {
-        const cell = cellsRow[col];
+    const camera_y = this.camera.y;
+    const first_row = Math.floor(-(camera_y + VIEW_H) / CELL_H) - 1;
+    const last_row = Math.ceil(-camera_y / CELL_H) + 1;
+    for (let row_index = first_row; row_index <= last_row; row_index++) {
+      const cells_row = this.grid.rows[row_index];
+      if (!cells_row) continue;
+      const screen_y = -row_index * CELL_H - camera_y;
+      for (let col_index = 0; col_index < GRID_W; col_index++) {
+        const cell = cells_row[col_index];
         if (cell.type === TYPE.EMPTY) continue;
-        const sx = col * CELL_W + PLAYFIELD_OFFSET_X;
-        this._drawCell(c, cell, sx, sy, r === GOAL_ROW);
+        const screen_x = col_index * CELL_W + PLAYFIELD_OFFSET_X;
+        this.art.draw_cell(c, cell, screen_x, screen_y, {
+          is_goal: row_index === GOAL_ROW,
+          row_index,
+        });
       }
     }
   }
 
-  _drawCell(c, cell, sx, sy, isGoal) {
-    if (this.sheets) {
-      if (cell.type === TYPE.ICE) {
-        this.sheets.tiles.draw(c, FRAME.ICE, sx, sy, CELL_W, CELL_H);
-        if (cell.hits === 1) {
-          c.fillStyle = 'rgba(0, 0, 0, 0.35)';
-          c.fillRect(sx, sy, CELL_W, CELL_H);
-        }
-      } else {
-        this.sheets.tiles.draw(c, isGoal ? FRAME.GOAL : FRAME.SOLID, sx, sy, CELL_W, CELL_H);
-        if (isGoal) {
-          c.fillStyle = 'rgba(255, 204, 51, 0.45)';
-          c.fillRect(sx, sy, CELL_W, CELL_H);
-        }
-      }
-      return;
-    }
-    // fallback 色塊
-    if (cell.type === TYPE.ICE) {
-      c.fillStyle = cell.hits === 2 ? '#bfe2ff' : '#7fa8c8';
-      c.fillRect(sx, sy, CELL_W, CELL_H);
-      c.fillStyle = '#3f6088';
-      c.fillRect(sx, sy + CELL_H - 1, CELL_W, 1);
-      c.fillRect(sx, sy, 1, CELL_H);
-    } else {
-      c.fillStyle = isGoal ? '#ffcc33' : '#888888';
-      c.fillRect(sx, sy, CELL_W, CELL_H);
-      c.fillStyle = isGoal ? '#cc8810' : '#555555';
-      c.fillRect(sx, sy + CELL_H - 1, CELL_W, 1);
-    }
-  }
-
-  _drawGoalLine(c) {
-    const camY = this.camera.y;
-    const goalY = -GOAL_ROW * CELL_H - camY;
-    if (goalY < -CELL_H || goalY > VIEW_H) return;
-    c.fillStyle = '#ffcc33';
-    for (let x = PLAYFIELD_OFFSET_X; x < PLAYFIELD_OFFSET_X + PLAYFIELD_W; x += 4) {
-      c.fillRect(x, goalY - 2, 2, 1);
-    }
-  }
-
+  /**
+   * 繪製玩家與槌子。
+   *
+   * @param {CanvasRenderingContext2D} c - 2D canvas context。
+   * @returns {void}
+   * @depends IceClimberArt.draw_player
+   */
   _drawPlayer(c) {
-    const camY = this.camera.y;
-    const px = this.player.x + PLAYFIELD_OFFSET_X;
-    const py = this.player.y - camY;
+    const camera_y = this.camera.y;
+    const player_x = this.player.x + PLAYFIELD_OFFSET_X;
+    const player_y = this.player.y - camera_y;
+    this.art.draw_player(c, this.player, player_x, player_y, this.elapsed);
+  }
 
-    if (this.sheets) {
-      const frame = this._playerFrame();
-      const flipX = this.player.facing < 0;
-      this.sheets.chars.draw(c, frame, px - 2, py - 2, 16, 16, { flipX });
-    } else {
-      c.fillStyle = '#ffcc33';
-      c.fillRect(px, py, PLAYER_W, PLAYER_H);
-      c.fillStyle = '#cc8810';
-      c.fillRect(px, py, PLAYER_W, 3);
-      c.fillStyle = '#000';
-      const eyeX = this.player.facing > 0 ? px + PLAYER_W - 4 : px + 2;
-      c.fillRect(eyeX, py + 5, 2, 2);
+  /**
+   * 推進破冰粒子的生命週期。
+   *
+   * @param {number} dt - 固定步長秒數。
+   * @returns {void}
+   * @depends PARTICLE_LIFE
+   */
+  _updateBreakEffects(dt) {
+    for (const effect of this.break_effects) {
+      effect.age += dt;
+      effect.x += effect.vx * dt;
+      effect.y += effect.vy * dt;
+      effect.vy += 240 * dt;
     }
+    this.break_effects = this.break_effects.filter((effect) => effect.age < effect.life);
+  }
 
-    if (this.player.state === 'hammer') {
-      const box = hammerHitbox(this.player);
-      c.fillStyle = 'rgba(255, 240, 160, 0.5)';
-      c.fillRect(box.x + PLAYFIELD_OFFSET_X, box.y - camY, box.w, box.h);
-      c.fillStyle = '#ffeeaa';
-      const handleX = this.player.facing > 0 ? px + PLAYER_W - 1 : px - 1;
-      c.fillRect(handleX, py + 2, 2, 6);
+  /**
+   * 依破掉的冰磚建立短暫碎冰粒子。
+   *
+   * @param {{col: number, row: number, by: string}[]} broke_cells - 本 tick 破掉的 cell 清單。
+   * @returns {void}
+   * @depends CELL_W, CELL_H
+   */
+  _spawnBreakEffects(broke_cells) {
+    for (const broke_cell of broke_cells) {
+      const origin_x = broke_cell.col * CELL_W + CELL_W / 2;
+      const origin_y = -broke_cell.row * CELL_H + CELL_H / 2;
+      for (let particle_index = 0; particle_index < 5; particle_index++) {
+        const spread_x = (particle_index - 2) * 34;
+        const spread_y = -90 - particle_index * 8;
+        this.break_effects.push({
+          x: origin_x,
+          y: origin_y,
+          vx: spread_x,
+          vy: spread_y,
+          age: 0,
+          life: PARTICLE_LIFE,
+        });
+      }
     }
   }
 
-  _playerFrame() {
-    const s = this.player.state;
-    if (s === 'hammer') return FRAME.P_HAMMER;
-    if (s === 'jump') return FRAME.P_JUMP;
-    if (s === 'fall') return FRAME.P_FALL;
-    if (s === 'run') {
-      return (Math.floor(this.elapsed * RUN_ANIM_HZ) % 2) ? FRAME.P_RUN_B : FRAME.P_RUN_A;
-    }
-    return FRAME.P_IDLE;
-  }
-
+  /**
+   * 釋放場景資源；目前場景沒有額外事件監聽需要移除。
+   *
+   * @returns {void}
+   * @depends none
+   */
   destroy() {}
 }

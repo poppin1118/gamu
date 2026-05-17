@@ -5,11 +5,18 @@
   --btn-bg: rgba(255, 255, 255, 0.12);
   --btn-bg-active: rgba(255, 204, 51, 0.55);
   --btn-border: rgba(255, 255, 255, 0.25);
+  --touch-button: clamp(48px, 13vw, 72px);
+  --touch-action: clamp(58px, 15vw, 82px);
+  --touch-portrait-height: min(42vh, 320px);
+  --touch-portrait-height: min(42dvh, 320px);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -19,6 +26,8 @@ html, body {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   overflow: hidden;
   overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -28,6 +37,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 canvas#game {
@@ -39,14 +49,163 @@ canvas#game {
   touch-action: none;
 }
 
-/* Touch overlay placeholder — wired up in M3 */
 #touch-overlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 10;
+  touch-action: none;
+  user-select: none;
+}
+
+#touch-overlay[hidden] {
+  display: none;
+}
+
+.touch-overlay__dpad,
+.touch-overlay__actions,
+.touch-overlay__system {
+  position: fixed;
+  pointer-events: auto;
+}
+
+.touch-overlay__dpad {
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(3, var(--touch-button));
+  grid-template-rows: repeat(3, var(--touch-button));
+  gap: 6px;
+}
+
+.touch-overlay__actions {
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 10px);
+  display: grid;
+  grid-template-columns: repeat(2, var(--touch-action));
+  align-items: end;
+  gap: 14px;
+}
+
+.touch-overlay__system {
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+}
+
+.touch-overlay__button {
+  width: var(--touch-button);
+  height: var(--touch-button);
+  border: 2px solid var(--btn-border);
+  border-radius: 50%;
+  background: var(--btn-bg);
+  color: rgba(255, 255, 255, 0.88);
+  font: 700 18px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0;
+  display: grid;
+  place-items: center;
+  outline: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.touch-overlay__button.is-active,
+.touch-overlay__button:active {
+  background: var(--btn-bg-active);
+  border-color: rgba(255, 255, 255, 0.72);
+  color: #10131c;
+}
+
+.touch-overlay__button--up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.touch-overlay__button--left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.touch-overlay__button--right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.touch-overlay__button--down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.touch-overlay__button--a,
+.touch-overlay__button--b {
+  width: var(--touch-action);
+  height: var(--touch-action);
+  font-size: 22px;
+}
+
+.touch-overlay__button--b {
+  transform: translateY(14px);
+}
+
+.touch-overlay__button--start {
+  width: 84px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.touch-overlay__spacer {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 /* Orientation classes toggled by Canvas.js / Input.js */
-body.portrait #app { flex-direction: column; }
-body.landscape #app { flex-direction: row; }
+body.portrait #app {
+  flex-direction: column;
+}
+
+body.landscape #app {
+  flex-direction: row;
+}
+
+body.portrait.touch-enabled #app {
+  justify-content: flex-start;
+  padding-bottom: calc(var(--touch-portrait-height) + env(safe-area-inset-bottom));
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+body.portrait.touch-enabled #touch-overlay {
+  top: auto;
+  min-height: var(--touch-portrait-height);
+  background:
+    linear-gradient(180deg, rgba(11, 15, 26, 0), rgba(11, 15, 26, 0.86) 22%),
+    rgba(11, 15, 26, 0.68);
+}
+
+body.portrait .touch-overlay__dpad {
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+body.portrait .touch-overlay__actions {
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 12px);
+}
+
+body.portrait .touch-overlay__system {
+  bottom: calc(var(--touch-portrait-height) - 42px);
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  :root {
+    --touch-button: 46px;
+    --touch-action: 58px;
+  }
+
+  .touch-overlay__button--start {
+    width: 72px;
+    height: 30px;
+    font-size: 10px;
+  }
+}

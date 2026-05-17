@@ -1,55 +1,79 @@
 import { TYPE, GRID_W } from './IceGrid.js';
 
-export const TOTAL_ROWS = 17;
-export const GOAL_ROW = 16;
-export const FLOOR_ROWS = 2;
+export const TOTAL_ROWS = 33;
+export const GOAL_ROW = 32;
+export const FLOOR_ROWS = 4;
 export const TOTAL_FLOORS = 8;
 
+/**
+ * 產生 8 層敲冰塊關卡。
+ *
+ * @param {object} rng - 由 makeRng 建立的 deterministic random helper。
+ * @returns {number[][]} 每一列的 cell type 陣列。
+ * @depends TYPE, GRID_W, GOAL_ROW
+ */
 export function generateLevel(rng) {
   const rows = [];
   rows.push(new Array(GRID_W).fill(TYPE.SOLID));
 
-  for (let r = 1; r <= GOAL_ROW - 1; r++) {
-    rows.push(generateRow(r, rng, rows[r - 1], rows[r - 2]));
+  for (let row_index = 1; row_index <= GOAL_ROW - 1; row_index++) {
+    rows.push(generateRow(row_index, rng, rows[row_index - 1], rows[row_index - 2]));
   }
 
-  const finalRow = new Array(GRID_W).fill(TYPE.SOLID);
-  const finalGapCol = Math.floor(rng.next() * GRID_W);
-  finalRow[finalGapCol] = TYPE.EMPTY;
-  rows.push(finalRow);
+  const final_row = new Array(GRID_W).fill(TYPE.SOLID);
+  const final_gap_candidates = [];
+  for (let col_index = 0; col_index < GRID_W; col_index++) {
+    if (rows[GOAL_ROW - 3][col_index] !== TYPE.EMPTY) final_gap_candidates.push(col_index);
+  }
+  const final_gap_col = final_gap_candidates.length > 0
+    ? final_gap_candidates[Math.floor(rng.next() * final_gap_candidates.length)]
+    : Math.floor(rng.next() * GRID_W);
+  final_row[final_gap_col] = TYPE.EMPTY;
+  rows.push(final_row);
 
-  for (let r = GOAL_ROW - 3; r <= GOAL_ROW - 1; r++) {
-    rows[r][finalGapCol] = TYPE.EMPTY;
+  // 終點前固定挖出短通道，避免最後一段死路但不讓同欄缺口過長。
+  for (let row_index = GOAL_ROW - 2; row_index <= GOAL_ROW - 1; row_index++) {
+    rows[row_index][final_gap_col] = TYPE.EMPTY;
   }
 
   return rows;
 }
 
-export function generateRow(rowIndex, rng, prev1, prev2) {
-  if (rowIndex === 0 || rowIndex === GOAL_ROW) {
+/**
+ * 產生單列冰磚配置，限制連續缺口並讓樓層線比一般列更完整。
+ *
+ * @param {number} row_index - 目前列索引，0 為出生平台。
+ * @param {object} rng - 由 makeRng 建立的 deterministic random helper。
+ * @param {number[] | undefined} prev_row - 前一列 cell type。
+ * @param {number[] | undefined} prev_prev_row - 前兩列 cell type。
+ * @returns {number[]} 這一列的 cell type 陣列。
+ * @depends TYPE, GRID_W, GOAL_ROW, FLOOR_ROWS
+ */
+export function generateRow(row_index, rng, prev_row, prev_prev_row) {
+  if (row_index === 0 || row_index === GOAL_ROW) {
     return new Array(GRID_W).fill(TYPE.SOLID);
   }
 
-  const isFloorLine = rowIndex % FLOOR_ROWS === 0;
-  const minGaps = 1;
-  const maxGaps = isFloorLine ? 2 : 4;
-  const numGaps = minGaps + Math.floor(rng.next() * (maxGaps - minGaps + 1));
+  const is_floor_line = row_index % FLOOR_ROWS === 0;
+  const min_gaps = 1;
+  const max_gaps = is_floor_line ? 2 : 4;
+  const num_gaps = min_gaps + Math.floor(rng.next() * (max_gaps - min_gaps + 1));
 
   const cols = [];
-  for (let i = 0; i < GRID_W; i++) cols.push(i);
-  for (let i = cols.length - 1; i > 0; i--) {
-    const j = Math.floor(rng.next() * (i + 1));
-    [cols[i], cols[j]] = [cols[j], cols[i]];
+  for (let col_index = 0; col_index < GRID_W; col_index++) cols.push(col_index);
+  for (let shuffle_index = cols.length - 1; shuffle_index > 0; shuffle_index--) {
+    const swap_index = Math.floor(rng.next() * (shuffle_index + 1));
+    [cols[shuffle_index], cols[swap_index]] = [cols[swap_index], cols[shuffle_index]];
   }
 
   const row = new Array(GRID_W).fill(TYPE.ICE);
   let placed = 0;
-  for (const c of cols) {
-    if (placed >= numGaps) break;
-    const p1 = prev1 && prev1[c] === TYPE.EMPTY;
-    const p2 = prev2 && prev2[c] === TYPE.EMPTY;
-    if (p1 && p2) continue;
-    row[c] = TYPE.EMPTY;
+  for (const col_index of cols) {
+    if (placed >= num_gaps) break;
+    const prev_gap = prev_row && prev_row[col_index] === TYPE.EMPTY;
+    const prev_prev_gap = prev_prev_row && prev_prev_row[col_index] === TYPE.EMPTY;
+    if (prev_gap && prev_prev_gap) continue;
+    row[col_index] = TYPE.EMPTY;
     placed++;
   }
   if (placed === 0) {

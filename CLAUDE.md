@@ -12,7 +12,7 @@
 - **Vanilla JS + 原生 ES Modules**，無 build step、無 TypeScript、無框架
 - **邏輯解析度 256×240**（對標 NES），CSS 整數倍縮放 + letterbox
 - **連線**：PeerJS / WebRTC P2P，房間代碼配對（M4 才實作）
-- **美術**：CC0 像素素材，主用 Kenney.nl
+- **美術**：Ice Climber 目前使用程式化 pixel art；外部 CC0 素材保留在 assets 供後續替換
 - **部署**：`main` 分支根目錄，commit 即 deploy
 
 ## 目錄結構
@@ -23,7 +23,7 @@ gamu/                     ← repo 根 = GitHub Pages 根
 ├── styles.css            橫豎屏佈局、letterbox、按鈕樣式
 ├── src/
 │   ├── main.js           啟動、註冊遊戲、scene 切換
-│   ├── engine/           遊戲共用，與具體遊戲無關
+│   ├── engine/           遊戲共用，與具體遊戲無關（含 TouchOverlay）
 │   ├── menu/             MainMenu、LobbyScene、GameRegistry
 │   ├── net/              M4 才加入 — PeerJS 包裝、訊息協定
 │   └── games/<id>/       每款遊戲自包含一個資料夾
@@ -36,6 +36,7 @@ gamu/                     ← repo 根 = GitHub Pages 根
 - **路徑一律相對**：`./foo.js`、`./assets/x.png`，不用絕對路徑（GH Pages 在子路徑）
 - **ES module 匯入必帶 `.js` 副檔名**：`import x from './foo.js'`
 - **不直接綁鍵盤事件**：遊戲內透過 `ctx.input.isDown(Btn.X)` / `ctx.input.wasPressed(Btn.X)`
+- **觸控輸入走 `TouchOverlay`**：DOM pointer 事件只寫入 `InputState.set(btn, true/false)`，遊戲不直接讀 DOM
 - **不用 `Math.random()`**（M2 起）：所有亂數走 `engine/Random.js` 的 seeded PRNG，為了未來決定論
 - **像素完美**：`image-rendering: pixelated`、`imageSmoothingEnabled = false`、backing store 不乘 DPR
 - **不引入 npm 套件**：要用第三方函式庫就固化到 `vendor/`
@@ -82,8 +83,9 @@ python -m http.server 8000
 
 ## 里程碑進度
 - [x] **M1** 引擎骨架 + 選單 + Dummy 遊戲
-- [x] **M2** Ice Climber 單人 MVP（色塊渲染，素材待 M3 前補）
-- [ ] **M3** 觸控覆蓋層 + 手機 RWD
+- [x] **M2** Ice Climber 單人 MVP
+- [x] **M2.5** Ice Climber 程式化 pixel art + 手感優化
+- [x] **M3** 觸控覆蓋層 + 手機 RWD
 - [ ] **M4** 雙人連線（PeerJS）
 - [ ] **M5** 收尾 + 音效 + 第二款遊戲
 
@@ -94,6 +96,7 @@ python -m http.server 8000
 - `update(dt)` 固定 60Hz；`render(ctx2d, alpha)` 收 0–1 插值因子，要做平滑動畫得自行用 alpha 內插上一/這一 tick 的狀態。
 - 每個 tick 順序：scene.update → `inputMgr.beginTick()`，所以 scene 在 update 內讀 `wasPressed/wasReleased` 看的是「本 tick 內新發生」的邊緣。
 - `main.js` 用 `loadingScene` 旗標讓 async `Scene.init()` 期間 update 跳過、render 畫 "LOADING..."。
+- `TouchOverlay` 只在 coarse pointer 裝置顯示；`?touch=1` 強制開啟，`?touch=0` 強制關閉。豎屏觸控模式下 `Canvas.js` 會保留底部控制帶高度。
 
 ## 測試 / Lint
 - 沒有測試框架、沒有 linter、沒有 build step。

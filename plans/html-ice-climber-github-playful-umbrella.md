@@ -1,13 +1,16 @@
 # Ice Climber 風格網頁遊戲（可擴充遊戲平台）
 
-> **狀態（最後更新時間：M2 完成，色塊渲染版本）**
+> **狀態（最後更新時間：M3 完成，觸控覆蓋層版本）**
 > - ✅ M1 引擎骨架 + 選單 + Dummy 遊戲（commit `1e083fd`）
 > - ✅ M2 Ice Climber 單人 MVP（commits `7bd2372`, `8f106d7`, `f60db43`，分支 `m2-iceclimber`）
->   - **暫用色塊渲染**：尚未下載 Kenney 素材；玩家/冰塊/終點都是純色矩形
 >   - 完成項目：Random/AssetLoader/PixelFont、IceGrid、Player 物理（軸分離 sweep、變動跳、槌擊）、Camera deadzone、LevelGen、HUD、勝負流程
->   - 待補（M3 前或 M5）：Kenney 素材替換色塊、`assets/LICENSES.md`
-> - 🟡 M3 觸控覆蓋層 + 手機 RWD — **下一步**
-> - ⬜ M4 雙人連線（PeerJS）
+> - ✅ M2.5 Ice Climber 畫面與手感優化
+>   - 程式化 pixel art：雪山背景、深藍邊界、彩色薄冰、裂冰、終點磚、雪衣角色、木槌、破冰粒子
+>   - 關卡節奏改成 8 層薄冰、同欄缺口 streak 受控，玩家移動改成加速度/減速度手感
+> - ✅ M3 觸控覆蓋層 + 手機 RWD
+>   - `engine/TouchOverlay.js`：DOM 虛擬按鈕、多點 pointer capture、`?touch=1` debug flag、失焦釋放按鍵
+>   - `styles.css` + `Canvas.js`：橫屏浮動控制、豎屏底部控制帶、iOS safe-area、canvas 預留控制區
+> - 🟡 M4 雙人連線（PeerJS）— **下一步**
 > - ⬜ M5 收尾 + 音效 + 第二款遊戲
 
 ---
@@ -26,9 +29,9 @@
    python -m http.server 8000
    # 瀏覽器開 http://localhost:8000/
    ```
-   應該要看到 Gamu 選單 + Dummy Bouncer 一個項目。
+   應該要看到 Gamu 選單、Dummy Bouncer 與 Ice Climber。
 
-3. 跟 Claude Code 說「**接續 M2，依照 plans/html-ice-climber-github-playful-umbrella.md**」即可。
+3. 跟 Claude Code 說「**接續 M4，依照 plans/html-ice-climber-github-playful-umbrella.md**」即可。
 
 ---
 
@@ -70,8 +73,9 @@ gamu/                              ← repo 根 = GitHub Pages 根
 │   ├── main.js                    啟動、scene 切換、registerGame、暴露 ctx
 │   ├── engine/
 │   │   ├── GameLoop.js            固定步長 60Hz update + 變動 render
-│   │   ├── Canvas.js              邏輯解析度 256×240，整數縮放
+│   │   ├── Canvas.js              邏輯解析度 256×240，整數縮放；手機豎屏保留觸控控制區
 │   │   ├── Input.js               InputManager + Btn 列舉；鍵盤映射
+│   │   ├── TouchOverlay.js        DOM 觸控覆蓋層（M3）
 │   │   └── Scene.js               Scene 基底類別
 │   ├── menu/
 │   │   ├── GameRegistry.js        registerGame / listGames / getGame
@@ -159,7 +163,7 @@ Scene 在 `init(ctx)` 中可用：
 
 ---
 
-# 🎯 M2 — Ice Climber 單人 MVP（下一步）
+# 🎯 M2 — Ice Climber 單人 MVP（已完成）
 
 ## 目標
 桌機可玩、可從第 1 層爬到第 8 層通關、掉出鏡頭失敗。
@@ -362,31 +366,34 @@ render: (alpha) => {
 ## 目標
 iPhone / Android 橫豎屏都能順手玩 Ice Climber。
 
+## 狀態
+✅ 已完成。觸控層只在 coarse pointer 裝置顯示，也可用 `?touch=1` 強制顯示；`?touch=0` 可強制關閉。
+
 ## 任務
-1. `engine/TouchOverlay.js` — DOM 虛擬按鈕
+1. ✅ `engine/TouchOverlay.js` — DOM 虛擬按鈕
    - 用 `<div>` + CSS flex，不在 Canvas 內畫
-   - 4 顆方向鍵（左下「+」字佈局）+ 2 顆動作鍵 A/B（右下）
+   - 4 顆方向鍵（左下「+」字佈局）+ 2 顆動作鍵 A/B（右下）+ START（底部中央）
    - `pointer-events` + `setPointerCapture` 處理多點觸控
    - 每個按鈕監聽 `pointerdown`/`pointerup`/`pointercancel` → 呼叫 `inputMgr.state.set(btn, true/false)`
 
-2. CSS（`styles.css`）
+2. ✅ CSS（`styles.css`）
    - 橫屏：浮在 letterbox 上（`position: fixed`）
    - 豎屏：佔下方 ~40% 視窗高度的控制帶
    - `touch-action: none` 全域、`env(safe-area-inset-*)` 避開 iOS notch
 
-3. 顯示時機
+3. ✅ 顯示時機
    - 偵測 `matchMedia('(pointer: coarse)')` 才顯示
    - 或加 URL `?touch=1` debug flag 強制顯示
 
-4. 處理瀏覽器奇怪行為
+4. ✅ 處理瀏覽器奇怪行為
    - `viewport` meta：`maximum-scale=1.0, user-scalable=no, viewport-fit=cover`（M1 已設）
    - 防止雙擊縮放、滑動瀏覽器 UI（iOS Safari 動態工具列）
 
 ## 驗收
-- iOS Safari + Android Chrome 真機測
-- 橫豎屏切換時 layout 正確
-- 同時按方向 + A 跳能多點觸控
-- 不會誤觸發頁面捲動 / 縮放
+- 待真機確認：iOS Safari + Android Chrome
+- 已用 module smoke test 確認 import 無語法錯誤
+- 設計上支援同時按方向 + A/B，多點 pointer 以引用計數釋放，避免按鍵卡住
+- `Canvas.js` 會在豎屏觸控模式預留底部控制區，避免畫面被按鈕遮住
 
 ---
 
